@@ -1,0 +1,106 @@
+a
+{
+	color: #0000CC;
+	text-decoration: none;
+}
+
+a img
+{
+	border-style: none;
+}
+
+table
+{
+	border-collapse: collapse;
+}
+td
+{
+	padding: 0px;
+	margin: 0px;
+	border-style: none;
+}
+
+body
+{
+	font-family: Arial;
+}
+
+.error
+{
+	background-color: #FFAAAA;
+	border: 1px solid #FF0000;
+	
+	padding: 5px;
+}
+
+.search-bar
+{
+	font-size: 24px;
+}
+.search-bar input
+{
+	font-size: inherit;
+	
+	padding: 5px;
+	margin: 0px;
+	
+	-webkit-appearance: none;
+  	-webkit-border-radius: 0;
+	
+	border: 1px solid;
+}
+
+.car-search-result
+{
+	display: inline-block;
+	vertical-align: top;
+	
+	width: 160px;
+	margin: 5px;
+	
+	position: relative;
+	
+	text-align: center;
+}
+
+.owned-banner
+{
+	position: absolute;
+	right: 0px;
+	top:   0px;
+	
+	line-height: 0px;
+}
+
+.owned-banner.search img
+{
+	width: 48px;
+	hieght: 48px;
+}
+
+.owned-banner.details img
+{
+	width: 128px;
+	hieght: 128px;
+}
+
+.owned-banner.pending
+{
+	opacity: 0.4;
+}
+
+.detail-image-container
+{
+	position: relative;
+	display: inline-block;
+	
+	padding-right: 64px;
+	padding-top: 64px;
+	padding-bottom: 64px;
+}
+
+.detail-table th
+{
+	text-align: left;
+	padding-right: 10px;
+}
