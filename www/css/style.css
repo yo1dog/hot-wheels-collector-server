@@ -49,6 +49,10 @@ body
 	
 	border: 1px solid;
 }
+.search-bar .button
+{
+	cursor: pointer;
+}
 
 .car-search-result
 {
@@ -96,7 +100,7 @@ body
 	
 	padding-right: 64px;
 	padding-top: 64px;
-	padding-bottom: 64px;
+	padding-bottom: 32px;
 }
 
 .detail-table th

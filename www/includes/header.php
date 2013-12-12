@@ -27,8 +27,8 @@ else if (isset($_SESSION['query']))
 			<tbody>
 				<tr>
 					<td style="width: 100%; padding-left: 5px;"><input type="text" name="query" value="<?php if ($query !== NULL) echo htmlspecialchars($query) ?>" style="width: 100%;" /></td>
-					<td style="padding-left: 20px;"><input type="submit" value="Search" /></td>
-					<td style="padding-left: 5px;"><input type="button" value="Collection" onclick="window.location='/collection.php';" /></td>
+					<td style="padding-left: 20px;"><input type="submit" class="button" value="Search" /></td>
+					<td style="padding-left: 5px;"><input type="button" class="button" value="Collection" onclick="window.location='/collection.php';" /></td>
 				</tr>
 			</tbody>
 		</table>
