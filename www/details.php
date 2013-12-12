@@ -63,7 +63,7 @@ if (is_object($result))
 </table>
 
 <script type="text/javascript">
-<?php include "/js/toggleCarOwned.js"; ?>
+<?php include 'js/toggleCarOwned.js'; ?>
 </script>
 
 	<?php

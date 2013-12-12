@@ -24,11 +24,10 @@ if ($result !== NULL)
 		
 		foreach ($cars as $car)
 			Templates::carSearchResult($car);
-		
 		?>
 		
 <script type="text/javascript">
-<?php include "/js/toggleCarOwned.js"; ?>
+<?php include 'js/toggleCarOwned.js'; ?>
 </script>
 		
 		<?php
