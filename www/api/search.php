@@ -5,7 +5,7 @@ if (!isset($_GET['query']))
 	die('"query" missing from query string.');
 }
 
-require '../includes/config.php';
+require '../includes/globals.php';
 require '../includes/hotWheelsAPI.php';
 require '../includes/database.php';
 

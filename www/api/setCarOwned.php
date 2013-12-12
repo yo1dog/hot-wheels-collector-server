@@ -10,7 +10,7 @@ if (!isset($_POST['owned']))
 	die('"owned" missing from POST data.');
 }
 
-require '../includes/config.php';
+require '../includes/globals.php';
 require '../includes/database.php';
 
 $carID = $_POST['carID'];

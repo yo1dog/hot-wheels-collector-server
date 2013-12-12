@@ -1,5 +1,5 @@
 <?php
-require 'includes/config.php';
+require 'includes/globals.php';
 require 'includes/hotWheelsAPI.php';
 require 'includes/database.php';
 require 'includes/templates.php';

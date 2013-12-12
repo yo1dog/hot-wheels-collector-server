@@ -5,7 +5,7 @@ if (!isset($_GET['carID']))
 	die('"carID" missing from query string.');
 }
 
-require '../includes/config.php';
+require '../includes/globals.php';
 require '../includes/hotWheelsAPI.php';
 require '../includes/database.php';
 
