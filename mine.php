@@ -3,6 +3,14 @@ require 'www/includes/hotWheelsAPI.php';
 require 'config.php';
 require 'www/includes/database.php';
 
+function clean($str)
+{
+	return
+		str_replace('Õ', '\'',
+		str_repalce('ª', '',
+		str_replace('¨', '')));
+}
+
 echo "Searching...\n";
 $cars = HotWheelsAPI::search(' ', 300);
 
@@ -28,7 +36,15 @@ foreach ($cars as $car)
 	// insert or update db
 	try
 	{
-		$db->insertOrUpdateCar($carDetails->id, $carDetails->name, $carDetails->toyNumber, $carDetails->segment, $carDetails->series, $carDetails->carNumber, $carDetails->color, $carDetails->make);
+		$db->insertOrUpdateCar(
+				clean($carDetails->id),
+				clean($carDetails->name),
+				clean($carDetails->toyNumber),
+				clean($carDetails->segment),
+				clean($carDetails->series),
+				clean($carDetails->carNumber),
+				clean($carDetails->color),
+				clean($carDetails->make));
 	}
 	catch (Exception $e)
 	{
