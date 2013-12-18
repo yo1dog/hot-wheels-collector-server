@@ -110,7 +110,7 @@ class DB
 		
 		$row = $result->fetch_row();
 		if ($row[0] === '1')
-			$query = "UPDATE cars SET name = \"$name\" toy_number = \"$toyNumber\" segment = \"$segment\" series = \"$series\" car_number = \"$carNumber\" color = \"$color\" make = \"$make\" WHERE id = \"$id\"";
+			$query = "UPDATE cars SET name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", car_number = \"$carNumber\", color = \"$color\", make = \"$make\" WHERE id = \"$id\"";
 		else
 			$query = "INSERT INTO cars (id, name, toy_number, segment, series, car_number, color, make) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$carNumber\", \"$color\", \"$make\")";
 		
