@@ -10,6 +10,9 @@ class DB
 		$errorNum = $this->mysqli->connect_errno;
 		if ($errorNum !== 0)
 			throw new Exception('Database connect error (' . $errorNum . '): ' . $this->mysqli->connect_error);
+		
+		if (!$this->mysqli->set_charset("utf8"))
+			throw new Exception('Error loading character set utf8: ' . $this->mysqli->error);
 	}
 	
 	

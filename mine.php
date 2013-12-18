@@ -4,7 +4,7 @@ require 'config.php';
 require 'www/includes/database.php';
 
 echo "Searching...\n";
-$cars = HotWheelsAPI::search('lotus', 300);
+$cars = HotWheelsAPI::search(' ', 300);
 
 if (is_string($cars))
 	die('Mine search failed: ' . $cars . "\n");
