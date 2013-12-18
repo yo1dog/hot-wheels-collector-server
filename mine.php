@@ -3,6 +3,8 @@ require 'www/includes/hotWheelsAPI.php';
 require 'config.php';
 require 'www/includes/database.php';
 
+ini_set("error_log", MINE_LOG_FILE);
+
 function clean($str)
 {
 	return
@@ -11,13 +13,23 @@ function clean($str)
 		str_replace('®', '', $str)));
 }
 
-echo "Searching...\n";
+function log($str)
+{
+	error_log($str);
+	echo $str, "\n";
+}
+
+
+log('Searching...');
 $cars = HotWheelsAPI::search(' ', 300);
 
 if (is_string($cars))
-	die('Mine search failed: ' . $cars . "\n");
+{
+	log('Mine search failed: ' . $cars);
+	die();
+}
 
-echo "Done\n";
+log('Done');
 
 $db = new DB();
 
@@ -29,7 +41,7 @@ foreach ($cars as $car)
 	
 	if (is_string($carDetails))
 	{
-		echo 'Mine getCarDetails failed for "', $car->id, '": ', $carDetails, "\n";
+		log('Mine getCarDetails failed for "' . $car->id . '": ' . $carDetails);
 		continue;
 	}
 	
@@ -48,7 +60,7 @@ foreach ($cars as $car)
 	}
 	catch (Exception $e)
 	{
-		echo 'Mine insertOrUpdateCar failed for "', $carDetails->id, '": ', $e->getMessage(), "\n";
+		log('Mine insertOrUpdateCar failed for "' . $carDetails->id, '": ' . $e->getMessage());
 	}
 	
 	
@@ -65,12 +77,12 @@ foreach ($cars as $car)
 	
 	$cURLErrorNum = curl_errno($ch);
 	if ($cURLErrorNum !== 0)
-		echo 'Mine download image cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch), "\n";
+		log('Mine download image failed for "' . $carDetails->id, '": "' . $car->imageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
 	else
 	{
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
-			echo 'Mine download image Request Error: Status code ' . $statusCode, "\n";
+			log('Mine download image failed for "' . $carDetails->id, '": "' . $car->imageURL . '" Request Error: Status code ' . $statusCode);
 	}
 	
 	curl_close($ch);
@@ -88,12 +100,12 @@ foreach ($cars as $car)
 	
 	$cURLErrorNum = curl_errno($ch);
 	if ($cURLErrorNum !== 0)
-		echo 'Mine download detail image cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch), "\n";
+		log('Mine download detail image failed for "' . $carDetails->id, '": "' . $carDetails->detailImageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
 	else
 	{
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
-			echo 'Mine download detail image Request Error: Status code ' . $statusCode, "\n";
+			log('Mine download detail image failed for "' . $carDetails->id, '": "' . $carDetails->detailImageURL . '" Request Error: Status code ' . $statusCode);
 	}
 	
 	curl_close($ch);

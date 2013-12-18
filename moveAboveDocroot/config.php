@@ -9,4 +9,6 @@ define('HOTWHEELS2_IMAGE_EXT',              '.png');
 define('HOTWHEELS2_IMAGE_DETAIL_SUFFIX',    '_details');
 define('HOTWHEELS2_BASE_IMAGE_URL',         '');
 define('HOTWHEELS2_MAX_NUM_SEARCH_RESULTS', 100);
+
+define('MINE_LOG_FILE', '');
 ?>
