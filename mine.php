@@ -44,7 +44,6 @@ foreach ($cars as $car)
 	curl_setopt($ch, CURLOPT_FILE,   $fp);
 	curl_setopt($ch, CURLOPT_HEADER, 0);
 	curl_exec($ch);
-	curl_close($ch);
 	
 	fclose($fp);
 	
@@ -58,6 +57,8 @@ foreach ($cars as $car)
 			echo 'Mine download image Request Error: Status code ' . $statusCode, "\n";
 	}
 	
+	curl_close($ch);
+	
 	// download detail image
 	$fp = fopen(HOTWHEELS2_IMAGE_PATH . $carDetails->id . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT, 'wb');
 	
@@ -66,7 +67,6 @@ foreach ($cars as $car)
 	curl_setopt($ch, CURLOPT_FILE,   $fp);
 	curl_setopt($ch, CURLOPT_HEADER, 0);
 	curl_exec($ch);
-	curl_close($ch);
 	
 	fclose($fp);
 	
@@ -79,6 +79,8 @@ foreach ($cars as $car)
 		if ($statusCode !== 200)
 			echo 'Mine download detail image Request Error: Status code ' . $statusCode, "\n";
 	}
+	
+	curl_close($ch);
 	
 	// done
 	++$numMined;
