@@ -13,23 +13,24 @@ function clean($str)
 		str_replace('®', '', $str)));
 }
 
-function log($str)
+function c_log($str)
 {
 	error_log($str);
 	echo $str, "\n";
 }
 
 
-log('Searching...');
+c_log('Mining Start');
+c_log('Searching...');
 $cars = HotWheelsAPI::search(' ', 300);
 
 if (is_string($cars))
 {
-	log('Mine search failed: ' . $cars);
+	c_log('Mine search failed: ' . $cars);
 	die();
 }
 
-log('Done');
+c_log('Done');
 
 $db = new DB();
 
@@ -41,7 +42,7 @@ foreach ($cars as $car)
 	
 	if (is_string($carDetails))
 	{
-		log('Mine getCarDetails failed for "' . $car->id . '": ' . $carDetails);
+		c_log('Mine getCarDetails failed for "' . $car->id . '": ' . $carDetails);
 		continue;
 	}
 	
@@ -60,7 +61,7 @@ foreach ($cars as $car)
 	}
 	catch (Exception $e)
 	{
-		log('Mine insertOrUpdateCar failed for "' . $carDetails->id, '": ' . $e->getMessage());
+		c_log('Mine insertOrUpdateCar failed for "' . $carDetails->id, '": ' . $e->getMessage());
 	}
 	
 	
@@ -77,12 +78,12 @@ foreach ($cars as $car)
 	
 	$cURLErrorNum = curl_errno($ch);
 	if ($cURLErrorNum !== 0)
-		log('Mine download image failed for "' . $carDetails->id, '": "' . $car->imageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
+		c_log('Mine download image failed for "' . $carDetails->id . '": "' . $car->imageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
 	else
 	{
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
-			log('Mine download image failed for "' . $carDetails->id, '": "' . $car->imageURL . '" Request Error: Status code ' . $statusCode);
+			c_log('Mine download image failed for "' . $carDetails->id . '": "' . $car->imageURL . '" Request Error: Status code ' . $statusCode);
 	}
 	
 	curl_close($ch);
@@ -100,12 +101,12 @@ foreach ($cars as $car)
 	
 	$cURLErrorNum = curl_errno($ch);
 	if ($cURLErrorNum !== 0)
-		log('Mine download detail image failed for "' . $carDetails->id, '": "' . $carDetails->detailImageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
+		c_log('Mine download detail image failed for "' . $carDetails->id . '": "' . $carDetails->detailImageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
 	else
 	{
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
-			log('Mine download detail image failed for "' . $carDetails->id, '": "' . $carDetails->detailImageURL . '" Request Error: Status code ' . $statusCode);
+			c_log('Mine download detail image failed for "' . $carDetails->id . '": "' . $carDetails->detailImageURL . '" Request Error: Status code ' . $statusCode);
 	}
 	
 	curl_close($ch);
@@ -116,4 +117,5 @@ foreach ($cars as $car)
 }
 
 $db->close();
+c_log('Mining Complete');
 ?>
