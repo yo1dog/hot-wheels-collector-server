@@ -1,4 +1,9 @@
 <?php
+if (!isset($_POST['userID']))
+{
+	http_response_code(400);
+	die('"userID" missing from POST data.');
+}
 if (!isset($_POST['carID']))
 {
 	http_response_code(400);
@@ -13,10 +18,16 @@ if (!isset($_POST['owned']))
 require '../includes/globals.php';
 require '../includes/database.php';
 
-$carID = $_POST['carID'];
-$owned = $_POST['owned'] === '1';
+$userID = $_POST['userID'];
+$carID  = $_POST['carID'];
+$owned  = $_POST['owned'] === '1';
 
 $db = new DB();
-$db->setCarOwned($carID, $owned);
+
+if ($owned)
+	$db->setCarOwned($userID, $carID);
+else
+	$db->setCarUnowned($userID, $carID);
+
 $db->close();
 ?>

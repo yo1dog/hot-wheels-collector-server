@@ -4,24 +4,20 @@ if (!isset($_GET['query']))
 	http_response_code(400);
 	die('"query" missing from query string.');
 }
+if (!isset($_GET['userID']))
+{
+	http_response_code(400);
+	die('"userID" missing from query string.');
+}
 
 require '../includes/globals.php';
-require '../includes/hotWheelsAPI.php';
 require '../includes/database.php';
 
 $query = $_GET['query'];
-$result = HotWheelsAPI::search($query);
-
-if (is_string($result))
-{
-	http_response_code(500);
-	die($result);
-}
-
-$cars = $result;
+$userID = $_GET['userID'];
 
 $db = new DB();
-$db->checkCarsOwned($cars);
+$cars = $db->search($query, $userID);
 $db->close();
 
 header('Content-type: application/json');

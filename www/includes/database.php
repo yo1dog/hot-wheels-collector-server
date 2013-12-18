@@ -14,24 +14,16 @@ class DB
 			throw new Exception('Database connect error (' . $errorNum . '): ' . $this->mysqli->connect_error);
 	}
 	
-	public function checkCarsOwned($cars)
+	
+	public function search($query, $userID = NULL)
 	{
-		if (count($cars) === 0)
-			return;
+		$query = 'SELECT *, ';
 		
-		$query = NULL;
+		if ($userID !== NULL)
+			$query .= '(SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
 		
-		foreach ($cars as $car)
-		{
-			if ($query === NULL)
-				$query = '';
-			else
-				$query .= ",\n";
-			
-			$query .= 'EXISTS(SELECT 1 FROM cars WHERE id = "' . $this->mysqli->escape_string($car->id) . '")';
-		}
+		$query .= ' FROM cars WHERE name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($query)) . '%" LIMIT ' . HOTWHEELS2_MAX_NUM_SEARCH_RESULTS;
 		
-		$query = "SELECT\n" . $query;
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -40,73 +32,93 @@ class DB
 		$result = $this->mysqli->store_result();
 		if ($result === false)
 			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		
+		$cars = array();
+		while (($row = $result->fetch_row()) !== NULL)
+			$cars = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $userID !== NULL && $row[8] === '1');
+		
+		$result->close();
+		
+		return $cars;
+	}
+	
+	public function getCollection($userID)
+	{
+		$query = 'SELECT cars.* FROM collections LEFT JOIN cars ON (cars.id = collections.car_id) WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '"';
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$cars = array();
+		while (($row = $result->fetch_row()) !== NULL)
+			$cars = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], true);
+		
+		$result->close();
+		
+		return $cars;
+	}
+	
+	public function setCarOwned($userID, $carID)
+	{
+		$query = 'INSERT INTO collections (user_id, car_id) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string(carID) . '")';
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+	}
+	
+	public function setCarUnowned($userID, $carID)
+	{
+		$query = 'DELETE FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = "' . $this->mysqli->real_escape_string($carID) . '"';
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+		{
+			$errorNum = $this->mysqli->errno;
+			
+			if ($errorNum !== 1062)
+				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		}
+	}
+	
+	
+	public function insertOrUpdateCar($id, $name, $toyNumber, $segment, $series, $carNumber, $color, $make)
+	{
+		$id        = $this->mysqli->real_escape_string($id);
+		$name      = $this->mysqli->real_escape_string($name);
+		$toyNumber = $this->mysqli->real_escape_string($toyNumber);
+		$segment   = $this->mysqli->real_escape_string($segment);
+		$series    = $this->mysqli->real_escape_string($series);
+		$carNumber = $this->mysqli->real_escape_string($carNumber);
+		$color     = $this->mysqli->real_escape_string($color);
+		$make      = $this->mysqli->real_escape_string($make);
+		
+		$query = "SELECT 1 FROM cars WHERE id = \"$id\"";
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
 		
 		$row = $result->fetch_row();
-		
-		$numCars = count($cars);
-		for ($i = 0; $i < $numCars; $i++)
-			$cars[$i]->owned = $row[$i] === "1";
-		
-		$result->close();
-	}
-	
-	function setCarOwned($carID, $owned)
-	{
-		if ($owned)
-		{
-			$query = 'SELECT 1 FROM cars WHERE id = "' . $this->mysqli->escape_string($carID) . '"';
-			
-			$success = $this->mysqli->real_query($query);
-			if (!$success)
-				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
-			
-			$result = $this->mysqli->store_result();
-			if ($result === false)
-				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
-			
-			$row = $result->fetch_row();
-			
-			if (!$row[0])
-			{
-				$query = 'INSERT INTO cars VALUES ("' . $this->mysqli->escape_string($carID) . '")';
-			
-				$success = $this->mysqli->real_query($query);
-				if (!$success)
-					throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
-			}
-		}
+		if ($row[0] === '1')
+			$query = "UPDATE cars SET name = \"$name\" toy_number = \"$toyNumber\" segment = \"$segment\" series = \"$series\" car_number = \"$carNumber\" color = \"$color\" make = \"$make\" WHERE id = \"$id\"";
 		else
-		{
-			$query = 'DELETE FROM cars WHERE id = "' . $this->mysqli->escape_string($carID) . '"';
-			
-			$success = $this->mysqli->real_query($query);
-			if (!$success)
-				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
-		}
-	}
-	
-	function getCarsOwned($limit = 0, $offset = 0)
-	{
-		$query = 'SELECT id FROM cars';
-		if ($limit > 0)
-			$query .= ' LIMIT ' . $offset . ', ' . $limit;
+			$query = "INSERT INTO cars (id, name, toy_number, segment, series, car_number, color, make) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$carNumber\", \"$color\", \"$make\")";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
 			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
-		
-		$result = $this->mysqli->store_result();
-		if ($result === false)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
-		
-		
-		$carIDs = array();
-		while (($row = $result->fetch_row()) !== NULL)
-			$carIDs[] = $row[0];
-		
-		$result->close();
-		
-		return $carIDs;
 	}
 	
 	

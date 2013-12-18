@@ -1,27 +1,18 @@
 <?php
+if (!isset($_GET['userID']))
+{
+	http_response_code(400);
+	die('"userID" missing from query string.');
+}
+
 require '../includes/globals.php';
-require '../includes/hotWheelsAPI.php';
 require '../includes/database.php';
 
-$db = new DB();
-$carIDs = $db->getCarsOwned();
-$db->close();
+$userID = $_GET['userID'];
 
-$cars = array();
-foreach ($carIDs as $carID)
-{
-	$result = HotWheelsAPI::getCarDetails($carID);
-	
-	if (is_string($result))
-		$cars[] = $result;
-	else
-	{
-		$car = $result;
-		
-		$car->owned = true;
-		$cars[] = $car;
-	}
-}
+$db = new DB();
+$cars = $db->getCollection($userID);
+$db->close();
 
 header('Content-type: application/json');
 echo json_encode($cars);

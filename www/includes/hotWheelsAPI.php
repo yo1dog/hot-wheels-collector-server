@@ -2,7 +2,6 @@
 define('HOTWHEELS_SEARCH_ENDPOINT_URL', 'http://www.hotwheels.com/CarCollections/DisplaySearchVehicles');
 define('HOTWHEELS_DETAIL_ENDPOINT_URL', 'http://www.hotwheels.com/CarCollections/GetVehicleDetail');
 define('HOTWHEELS_BASE_IMAGE_URL',      'http://www.hotwheels.com');
-define('MAX_NUM_SEARCH_RESULTS',        100);
 
 class Car
 {
@@ -20,7 +19,6 @@ class Car
 		$this->toyNumber = $toyNumber;
 		$this->imagePath = $imagePath;
 		$this->imageURL  = HOTWHEELS_BASE_IMAGE_URL . $imagePath;
-		$this->owned     = false;
 	}
 }
 
@@ -69,7 +67,7 @@ class HotWheelsAPI
 	 *
 	 * Returns an array of Car Search Result Models on success or a string containing an error message.
 	 */
-	public static function search($query)
+	public static function search($query, $idOnly = false, $cURLTimeout = 30)
 	{
 		// create cURL request
 		$postFields = array(
@@ -81,6 +79,7 @@ class HotWheelsAPI
 		curl_setopt($ch, CURLOPT_URL,            HOTWHEELS_SEARCH_ENDPOINT_URL);
 		curl_setopt($ch, CURLOPT_POST,           count($postFields));
 		curl_setopt($ch, CURLOPT_POSTFIELDS,     $postFields);
+		curl_setopt($ch, CURLOPT_TIMEOUT,        $cURLTimeout);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		
 		// execute cURL request
@@ -98,37 +97,51 @@ class HotWheelsAPI
 		if ($statusCode !== 200)
 			return 'Request Error: Status code ' . $statusCode;
 		
-		// parse out the cars
-		$cars = array();
-		
-		$numCars = 0;
-		$index = 0;
-		while (($index = strpos($cURLResult, 'cars=', $index)) !== false)
+		if ($idOnly)
 		{
-			$index += 6;
-			$index2 = strpos($cURLResult, '"', $index);
-			$toyNumber = substr($cURLResult, $index, $index2 - $index);
+			$carIDs = array();
 			
-			$index = strpos($cURLResult, 'src=', $index) + 5;
-			$index2 = strpos($cURLResult, '"', $index);
-			$imagePath = substr($cURLResult, $index, $index2 - $index);
+			$index = 0;
+			while (($index = strpos($cURLResult, 'carId=', $index)) !== false)
+			{
+				$index += 7;
+				$index2 = strpos($cURLResult, '"', $index);
+				$id = substr($cURLResult, $index, $index2 - $index);
+				
+				$carIDs[] = $id;
+			}
 			
-			$index = strpos($cURLResult, 'carId=', $index) + 7;
-			$index2 = strpos($cURLResult, '"', $index);
-			$id = substr($cURLResult, $index, $index2 - $index);
-			
-			$index = strpos($cURLResult, '>', $index) + 1;
-			$index2 = strpos($cURLResult, '<', $index);
-			$name = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-			
-			$cars[] = new Car($id, $name, $toyNumber, $imagePath);
-			$numCars ++;
-			
-			if ($numCars === MAX_NUM_SEARCH_RESULTS)
-				break;
+			return $carIDs;
 		}
-		
-		return $cars;
+		else
+		{
+			// parse out the cars
+			$cars = array();
+			
+			$index = 0;
+			while (($index = strpos($cURLResult, 'cars=', $index)) !== false)
+			{
+				$index += 6;
+				$index2 = strpos($cURLResult, '"', $index);
+				$toyNumber = substr($cURLResult, $index, $index2 - $index);
+				
+				$index = strpos($cURLResult, 'src=', $index) + 5;
+				$index2 = strpos($cURLResult, '"', $index);
+				$imagePath = substr($cURLResult, $index, $index2 - $index);
+				
+				$index = strpos($cURLResult, 'carId=', $index) + 7;
+				$index2 = strpos($cURLResult, '"', $index);
+				$id = substr($cURLResult, $index, $index2 - $index);
+				
+				$index = strpos($cURLResult, '>', $index) + 1;
+				$index2 = strpos($cURLResult, '<', $index);
+				$name = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+				
+				$cars[] = new Car($id, $name, $toyNumber, $imagePath);
+			}
+			
+			return $cars;
+		}
 	}
 	
 	
