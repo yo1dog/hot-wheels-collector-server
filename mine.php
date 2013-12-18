@@ -51,11 +51,12 @@ foreach ($cars as $car)
 	$cURLErrorNum = curl_errno($ch);
 	if ($cURLErrorNum !== 0)
 		echo 'Mine download image cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch), "\n";
-	
-	$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	if ($statusCode !== 200)
-		echo 'Mine download image Request Error: Status code ' . $statusCode, "\n";
-	
+	else
+	{
+		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		if ($statusCode !== 200)
+			echo 'Mine download image Request Error: Status code ' . $statusCode, "\n";
+	}
 	
 	// download detail image
 	$fp = fopen(HOTWHEELS2_IMAGE_PATH . $carDetails->id . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT, 'wb');
@@ -72,10 +73,12 @@ foreach ($cars as $car)
 	$cURLErrorNum = curl_errno($ch);
 	if ($cURLErrorNum !== 0)
 		echo 'Mine download detail image cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch), "\n";
-	
-	$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	if ($statusCode !== 200)
-		echo 'Mine download detail image Request Error: Status code ' . $statusCode, "\n";
+	else
+	{
+		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		if ($statusCode !== 200)
+			echo 'Mine download detail image Request Error: Status code ' . $statusCode, "\n";
+	}
 	
 	// done
 	++$numMined;
