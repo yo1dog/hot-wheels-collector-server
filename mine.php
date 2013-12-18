@@ -6,9 +6,9 @@ require 'www/includes/database.php';
 function clean($str)
 {
 	return
-		str_replace('Õ', '\'',
-		str_replace('ª', '',
-		str_replace('¨', '', $str)));
+		str_replace('â€™', '\'',
+		str_replace('â„¢', '',
+		str_replace('Â®', '', $str)));
 }
 
 echo "Searching...\n";
