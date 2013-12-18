@@ -7,8 +7,8 @@ function clean($str)
 {
 	return
 		str_replace('Õ', '\'',
-		str_repalce('ª', '',
-		str_replace('¨', '')));
+		str_replace('ª', '',
+		str_replace('¨', '', $str)));
 }
 
 echo "Searching...\n";
