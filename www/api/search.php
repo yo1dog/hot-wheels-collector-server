@@ -11,6 +11,7 @@ if (!isset($_GET['userID']))
 }
 
 require '../includes/globals.php';
+require '../../config.php';
 require '../includes/database.php';
 
 $query = $_GET['query'];

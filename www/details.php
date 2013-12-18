@@ -7,6 +7,7 @@ if (!isset($_GET['carID']))
 
 require 'includes/globals.php';
 require 'includes/hotWheelsAPI.php';
+require '../config.php';
 require 'includes/database.php';
 
 include 'includes/header.php';

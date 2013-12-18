@@ -1,6 +1,7 @@
 <?php
 require 'includes/globals.php';
 require 'includes/hotWheelsAPI.php';
+require '../config.php';
 require 'includes/database.php';
 require 'includes/templates.php';
 

@@ -1,5 +1,6 @@
 <?php
 require 'www/includes/hotWheelsAPI.php';
+require 'config.php';
 require 'www/includes/database.php';
 
 $carIDs = HotWheelsAPI::search(' ', true, 300);
@@ -9,6 +10,7 @@ if (is_string($carIDs))
 
 $db = new DB();
 
+$numMined = 0;
 foreach ($carIDs as $carID)
 {
 	$car = HotWheelsAPI::getCarDetails($carID);
@@ -27,6 +29,9 @@ foreach ($carIDs as $carID)
 	{
 		echo 'Mine insertOrUpdateCar failed for "', $carID, '": ', $e->message, "\n";
 	}
+	
+	++$numMined;
+	echo 'Mined (', $numMined, ') "', $car->id, '" - "', $car->name, "\"\n";
 }
 
 $db->close();
