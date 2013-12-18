@@ -6,8 +6,8 @@ require 'www/includes/database.php';
 echo "Searching...\n";
 $cars = HotWheelsAPI::search(' ', 300);
 
-if (is_string($carIDs))
-	die('Mine search failed: ' . $carIDs . "\n");
+if (is_string($cars))
+	die('Mine search failed: ' . $cars . "\n");
 
 echo "Done\n";
 
@@ -17,7 +17,7 @@ $numMined = 0;
 foreach ($cars as $car)
 {
 	// get details
-	$carDetails = HotWheelsAPI::getCarDetails($carID);
+	$carDetails = HotWheelsAPI::getCarDetails($car->id);
 	
 	if (is_string($carDetails))
 	{
@@ -32,7 +32,7 @@ foreach ($cars as $car)
 	}
 	catch (Exception $e)
 	{
-		echo 'Mine insertOrUpdateCar failed for "', $carID, '": ', $e->message, "\n";
+		echo 'Mine insertOrUpdateCar failed for "', $carDetails->id, '": ', $e->message, "\n";
 	}
 	
 	
