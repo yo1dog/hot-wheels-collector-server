@@ -67,7 +67,7 @@ class HotWheelsAPI
 	 *
 	 * Returns an array of Car Search Result Models on success or a string containing an error message.
 	 */
-	public static function search($query, $idOnly = false, $cURLTimeout = 30)
+	public static function search($query, $cURLTimeout = 30)
 	{
 		// create cURL request
 		$postFields = array(
@@ -97,51 +97,32 @@ class HotWheelsAPI
 		if ($statusCode !== 200)
 			return 'Request Error: Status code ' . $statusCode;
 		
-		if ($idOnly)
+		// parse out the cars
+		$cars = array();
+		
+		$index = 0;
+		while (($index = strpos($cURLResult, 'cars=', $index)) !== false)
 		{
-			$carIDs = array();
+			$index += 6;
+			$index2 = strpos($cURLResult, '"', $index);
+			$toyNumber = substr($cURLResult, $index, $index2 - $index);
 			
-			$index = 0;
-			while (($index = strpos($cURLResult, 'carId=', $index)) !== false)
-			{
-				$index += 7;
-				$index2 = strpos($cURLResult, '"', $index);
-				$id = substr($cURLResult, $index, $index2 - $index);
-				
-				$carIDs[] = $id;
-			}
+			$index = strpos($cURLResult, 'src=', $index) + 5;
+			$index2 = strpos($cURLResult, '"', $index);
+			$imagePath = substr($cURLResult, $index, $index2 - $index);
 			
-			return $carIDs;
+			$index = strpos($cURLResult, 'carId=', $index) + 7;
+			$index2 = strpos($cURLResult, '"', $index);
+			$id = substr($cURLResult, $index, $index2 - $index);
+			
+			$index = strpos($cURLResult, '>', $index) + 1;
+			$index2 = strpos($cURLResult, '<', $index);
+			$name = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			
+			$cars[] = new Car($id, $name, $toyNumber, $imagePath);
 		}
-		else
-		{
-			// parse out the cars
-			$cars = array();
-			
-			$index = 0;
-			while (($index = strpos($cURLResult, 'cars=', $index)) !== false)
-			{
-				$index += 6;
-				$index2 = strpos($cURLResult, '"', $index);
-				$toyNumber = substr($cURLResult, $index, $index2 - $index);
-				
-				$index = strpos($cURLResult, 'src=', $index) + 5;
-				$index2 = strpos($cURLResult, '"', $index);
-				$imagePath = substr($cURLResult, $index, $index2 - $index);
-				
-				$index = strpos($cURLResult, 'carId=', $index) + 7;
-				$index2 = strpos($cURLResult, '"', $index);
-				$id = substr($cURLResult, $index, $index2 - $index);
-				
-				$index = strpos($cURLResult, '>', $index) + 1;
-				$index2 = strpos($cURLResult, '<', $index);
-				$name = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-				
-				$cars[] = new Car($id, $name, $toyNumber, $imagePath);
-			}
-			
-			return $cars;
-		}
+		
+		return $cars;
 	}
 	
 	
