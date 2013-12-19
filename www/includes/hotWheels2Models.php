@@ -15,7 +15,7 @@ class HW2Car
 	public $imageURL;
 	public $detailImageURL;
 	
-	public function __construct($id, $name, $toyNumber, $segment, $series, $carNumber, $color, $make, $owned)
+	public function __construct($id, $name, $toyNumber, $segment, $series, $carNumber, $color, $make, $imageName, $sortName, $owned)
 	{
 		$this->id        = $id;
 		$this->name      = $name;
@@ -28,8 +28,8 @@ class HW2Car
 		
 		$this->owned = $owned;
 		
-		$this->imageURL       = HOTWHEELS2_BASE_IMAGE_URL . $id . HOTWHEELS2_IMAGE_EXT;
-		$this->detailImageURL = HOTWHEELS2_BASE_IMAGE_URL . $id . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		$this->imageURL       = HOTWHEELS2_BASE_IMAGE_URL . $imageName . HOTWHEELS2_IMAGE_EXT;
+		$this->detailImageURL = HOTWHEELS2_BASE_IMAGE_URL . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
 	}
 }
 ?>

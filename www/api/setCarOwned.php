@@ -17,6 +17,7 @@ if (!isset($_POST['owned']))
 
 require '../includes/globals.php';
 require '../../config.php';
+require	'../includes/hotWheels2Models.php';
 require '../includes/database.php';
 
 $userID = $_POST['userID'];

@@ -7,10 +7,21 @@ ini_set("error_log", MINE_LOG_FILE);
 
 function clean($str)
 {
-	return
-		str_replace('’', '\'',
+	$str =
+		str_replace('’', '',
 		str_replace('™', '',
 		str_replace('®', '', $str)));
+	
+	if ($str[0] === '\'')
+		$str = substr($str, 1);
+
+	if (preg_match('/^[0-9]+\'s/', $str))
+	{
+		$index = strpos($str, '\'s');
+		$str = substr($str, 0, $index) . substr($str, $index + 2);
+	}
+	
+	return $str;
 }
 
 function c_log($str)
@@ -46,22 +57,49 @@ foreach ($cars as $car)
 		continue;
 	}
 	
+	$imageName = preg_replace('/[^a-zA-Z0-9]/', '_', $carDetails->id);
+	
+	// create sortname
+	$sortName = strtolower($carDetails->name);
+	$sortName = preg_replace('/[^a-z0-9 ]/', '', $sortName);
+	
+	if (preg_match('/^[0-9]+s/', $sortName))
+	{
+		$index = strpos($sortName, 's');
+		$sortName = substr($sortName, 0, $index) . substr($sortName, $index + 1);
+	}
+	
+	$sortName = str_replace(' ', '', $sortName);
+	
+	$matches;
+	if (preg_match('/^[0-9]+/', $sortName, $matches))
+	{
+		if (count($matches) > 0)
+		{
+			$yearStr = $matches[0];			
+			$sortName = substr($sortName, strlen($yearStr)) . ' ' . $yearStr;
+		}
+	}
+	
+	
 	// insert or update db
 	try
 	{
 		$db->insertOrUpdateCar(
-				clean($carDetails->id),
+				$carDetails->id,
 				clean($carDetails->name),
 				clean($carDetails->toyNumber),
 				clean($carDetails->segment),
 				clean($carDetails->series),
 				clean($carDetails->carNumber),
 				clean($carDetails->color),
-				clean($carDetails->make));
+				clean($carDetails->make),
+				$imageName,
+				$sortName);
 	}
 	catch (Exception $e)
 	{
-		c_log('Mine insertOrUpdateCar failed for "' . $carDetails->id, '": ' . $e->getMessage());
+		c_log('Mine insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
 	}
 	
 	

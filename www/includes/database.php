@@ -16,15 +16,14 @@ class DB
 	}
 	
 	
-	public function search($query, $userID = NULL)
+	public function search($searchQuery, $userID = NULL)
 	{
-		$query = 'SELECT *, ';
+		$query = 'SELECT *';
 		
 		if ($userID !== NULL)
-			$query .= '(SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
 		
-		$query .= ' FROM cars WHERE name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($query)) . '%" LIMIT ' . HOTWHEELS2_MAX_NUM_SEARCH_RESULTS;
-		
+		$query .= ' FROM cars WHERE name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($searchQuery)) . '%" ORDER BY sort_name ASC LIMIT ' . HOTWHEELS2_MAX_NUM_SEARCH_RESULTS;
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -37,7 +36,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $userID !== NULL && $row[8] === '1');
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9], $userID !== NULL && $row[10] === '1');
 		
 		$result->close();
 		
@@ -58,7 +57,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], true);
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9], true);
 		
 		$result->close();
 		
@@ -89,7 +88,7 @@ class DB
 	}
 	
 	
-	public function insertOrUpdateCar($id, $name, $toyNumber, $segment, $series, $carNumber, $color, $make)
+	public function insertOrUpdateCar($id, $name, $toyNumber, $segment, $series, $carNumber, $color, $make, $imageName, $sortName)
 	{
 		$id        = $this->mysqli->real_escape_string($id);
 		$name      = $this->mysqli->real_escape_string($name);
@@ -99,6 +98,8 @@ class DB
 		$carNumber = $this->mysqli->real_escape_string($carNumber);
 		$color     = $this->mysqli->real_escape_string($color);
 		$make      = $this->mysqli->real_escape_string($make);
+		$imageName = $this->mysqli->real_escape_string($imageName);
+		$sortName  = $this->mysqli->real_escape_string($sortName);
 		
 		$query = "SELECT 1 FROM cars WHERE id = \"$id\"";
 		
@@ -113,9 +114,9 @@ class DB
 		
 		$row = $result->fetch_row();
 		if ($row[0] === '1')
-			$query = "UPDATE cars SET name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", car_number = \"$carNumber\", color = \"$color\", make = \"$make\" WHERE id = \"$id\"";
+			$query = "UPDATE cars SET name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", car_number = \"$carNumber\", color = \"$color\", make = \"$make\", image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"$id\"";
 		else
-			$query = "INSERT INTO cars (id, name, toy_number, segment, series, car_number, color, make) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$carNumber\", \"$color\", \"$make\")";
+			$query = "INSERT INTO cars (id, name, toy_number, segment, series, car_number, color, make, image_name, sort_name) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$carNumber\", \"$color\", \"$make\", \"$imageName\", \"$sortName\")";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
