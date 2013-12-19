@@ -7,6 +7,9 @@ ini_set("error_log", MINE_LOG_FILE);
 
 function clean($str)
 {
+	if (strlen($str) === 0)
+		return $str;
+	
 	$str =
 		str_replace('’', '',
 		str_replace('™', '',
@@ -127,7 +130,7 @@ foreach ($cars as $car)
 	curl_close($ch);
 	
 	// download detail image
-	$fp = fopen(HOTWHEELS2_IMAGE_PATH . $carDetails->id . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT, 'wb');
+	$fp = fopen(HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT, 'wb');
 	
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL,    $carDetails->detailImageURL);
