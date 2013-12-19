@@ -45,7 +45,7 @@ class DB
 	
 	public function getCollection($userID)
 	{
-		$query = 'SELECT cars.* FROM collections LEFT JOIN cars ON (cars.id = collections.car_id) WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '"';
+		$query = 'SELECT cars.* FROM collections LEFT JOIN cars ON (cars.id = collections.car_id) WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" ORDER BY sort_name ASC';
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -66,7 +66,7 @@ class DB
 	
 	public function setCarOwned($userID, $carID)
 	{
-		$query = 'INSERT INTO collections (user_id, car_id) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string(carID) . '")';
+		$query = 'INSERT INTO collections (user_id, car_id) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string($carID) . '")';
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
