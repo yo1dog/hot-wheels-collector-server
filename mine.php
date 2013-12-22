@@ -142,8 +142,10 @@ foreach ($cars as $car)
 	{
 		$name = clean($carDetails->name);
 		
-		if (ord($name[0]) > 47 && ord($name[0]) < 58 &&
-			ord($name[1]) > 47 && ord($name[1]) < 58)
+		$ascii0 = ord($name[0]);
+		$ascii1 = ord($name[1]);
+		if ($ascii0 > 47 && $ascii0 < 58 &&
+			$ascii1 > 47 && $ascii1 < 58)
 		{
 			if ($name[2] === '\'' && $name[3] !== 's')
 				$name = '\'' . substr($name, 0, 2) . substr($str, 3);
@@ -158,6 +160,7 @@ foreach ($cars as $car)
 				clean($carDetails->carNumber),
 				clean($carDetails->color),
 				clean($carDetails->make),
+				$carDetails->numUsersCollected,
 				$imageName,
 				$sortName);
 	}

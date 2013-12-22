@@ -31,20 +31,22 @@ class CarDetails extends Car
 	public $carNumber;
 	public $color;
 	public $make;
+	public $numUsersCollected;
 	
-	public function __construct($id, $name, $toyNumber, $detailImagePath, $segment, $series, $carNumber, $color, $make)
+	public function __construct($id, $name, $toyNumber, $detailImagePath, $segment, $series, $carNumber, $color, $make, $numUsersCollected)
 	{
 		$imagePath = substr($detailImagePath, 0, strlen($detailImagePath) - 15) . 'chicklet_none.png';
 		
 		parent::__construct($id, $name, $toyNumber, $imagePath);
 		
-		$this->segment         = $segment;
-		$this->series          = $series;
-		$this->carNumber       = $carNumber;
-		$this->color           = $color;
-		$this->make            = $make;
-		$this->detailImagePath = $detailImagePath;
-		$this->detailImageURL  = HOTWHEELS_BASE_IMAGE_URL . $detailImagePath;
+		$this->segment           = $segment;
+		$this->series            = $series;
+		$this->carNumber         = $carNumber;
+		$this->color             = $color;
+		$this->make              = $make;
+		$this->numUsersCollected = $numUsersCollected;
+		$this->detailImagePath   = $detailImagePath;
+		$this->detailImageURL    = HOTWHEELS_BASE_IMAGE_URL . $detailImagePath;
 	}
 }
 
@@ -177,7 +179,7 @@ class HotWheelsAPI
 		{
 			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
 			$index2 = strpos($cURLResult, '<', $index);
-			$segment =  self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$segment = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
 		else
 			$segment = '';
@@ -187,7 +189,7 @@ class HotWheelsAPI
 		{
 			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
 			$index2 = strpos($cURLResult, '<', $index);
-			$series =  self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$series = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
 		else
 			$series = '';
@@ -197,7 +199,7 @@ class HotWheelsAPI
 		{
 			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
 			$index2 = strpos($cURLResult, '<', $index);
-			$carNumber =  self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$carNumber = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
 		else
 			$carNumber = '';
@@ -207,7 +209,7 @@ class HotWheelsAPI
 		{
 			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
 			$index2 = strpos($cURLResult, '<', $index);
-			$color =  self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$color = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
 		else
 			$color = '';
@@ -217,7 +219,7 @@ class HotWheelsAPI
 		{
 			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
 			$index2 = strpos($cURLResult, '<', $index);
-			$make =  self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$make = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
 		else
 			$make = '';
@@ -227,12 +229,35 @@ class HotWheelsAPI
 		{
 			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
 			$index2 = strpos($cURLResult, '<', $index);
-			$toyNumber =  self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$toyNumber = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
 		else
 			$toyNumber = '';
 		
-		return new CarDetails($carID, $name, $toyNumber, $imagePath, $segment, $series, $carNumber, $color, $make);
+		$index = strpos($cURLResult, 'Times Collected:');
+		if ($index !== false)
+		{
+			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
+			$index2 = strpos($cURLResult, '<', $index);
+			$numUsersCollectedStr = trim(substr($cURLResult, $index, $index2 - $index));
+			
+			$isInt = true;
+			for ($i = 0; $i < strlen($numUsersCollectedStr); ++$i)
+			{
+				$ascii = ord($numUsersCollectedStr[$i]);
+				if ($ascii < 48 || $ascii > 57)
+				{
+					$isInt = false;
+					break;
+				}
+			}
+			
+			$numUsersCollected = $isInt ? intval($numUsersCollectedStr) : NULL;
+		}
+		else
+			$numUsersCollected = NULL;
+		
+		return new CarDetails($carID, $name, $toyNumber, $imagePath, $segment, $series, $carNumber, $color, $make, $numUsersCollected);
 	}
 }
 ?>
