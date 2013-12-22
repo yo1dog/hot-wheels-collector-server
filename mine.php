@@ -10,21 +10,10 @@ function clean($str)
 	if (strlen($str) === 0)
 		return $str;
 	
-	$str =
-		str_replace('’', '',
+	return
+		str_replace('’', '\'',
 		str_replace('™', '',
 		str_replace('®', '', $str)));
-	
-	if ($str[0] === '\'')
-		$str = substr($str, 1);
-
-	if (preg_match('/^[0-9]+\'s/', $str))
-	{
-		$index = strpos($str, '\'s');
-		$str = substr($str, 0, $index) . substr($str, $index + 2);
-	}
-	
-	return $str;
 }
 
 function c_log($str)
@@ -151,9 +140,18 @@ foreach ($cars as $car)
 	// insert or update db
 	try
 	{
+		$name = clean($carDetails->name);
+		
+		if (ord($name[0]) > 47 && ord($name[0]) < 58 &&
+			ord($name[1]) > 47 && ord($name[1]) < 58)
+		{
+			if ($name[2] === '\'' && $name[3] !== 's')
+				$name = '\'' . substr($name, 0, 2) . substr($str, 3);
+		}
+		
 		$db->insertOrUpdateCar(
 				$carDetails->id,
-				clean($carDetails->name),
+				$name,
 				clean($carDetails->toyNumber),
 				clean($carDetails->segment),
 				clean($carDetails->series),
