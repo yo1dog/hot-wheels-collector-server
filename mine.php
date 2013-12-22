@@ -33,6 +33,66 @@ function c_log($str)
 	echo $str, "\n";
 }
 
+function downloadImage($filename, $url, $id, $imgType)
+{
+	$fp = NULL;
+	$ch = NULL;
+	$result = 0;
+	
+	try
+	{
+		$fp = fopen($filename, 'wb');
+		
+		if ($fp === false)
+		{
+			c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $filename . '" unable to open file');
+			return 0;
+		}
+		
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL,    $url);
+		curl_setopt($ch, CURLOPT_FILE,   $fp);
+		curl_setopt($ch, CURLOPT_HEADER, 0);
+		curl_exec($ch);
+		
+		fclose($fp);
+		$fp = NULL;
+		
+		$cURLErrorNum = curl_errno($ch);
+		if ($cURLErrorNum !== 0)
+		{
+			c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $url . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
+			$result = 2;
+		}
+		else
+		{
+			$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			
+			if ($statusCode !== 200)
+			{
+				c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $url . '" Request Error: Status code ' . $statusCode);
+				$result = 2;
+			}
+			else
+				$result = 1;
+		}
+		
+		curl_close($ch);
+		$ch = NULL;
+	}
+	catch(Exception $e)
+	{
+		if ($fp)
+			fclose($fp);
+		if ($ch)
+			curl_close($ch);
+		
+		c_log('Download ' . $imgType . ' image failed for "' . $id . '": ' . $e->getMessage());
+	}
+	
+	return $result;
+}
+
 
 c_log('Mining Start');
 c_log('Searching...');
@@ -40,7 +100,7 @@ $cars = HotWheelsAPI::search(' ', 300);
 
 if (is_string($cars))
 {
-	c_log('Mine search failed: ' . $cars);
+	c_log('Search failed: ' . $cars);
 	die();
 }
 
@@ -59,7 +119,7 @@ foreach ($cars as $car)
 	
 	if (is_string($carDetails))
 	{
-		c_log('Mine getCarDetails failed for "' . $car->id . '": ' . $carDetails);
+		c_log('getCarDetails failed for "' . $car->id . '": ' . $carDetails);
 		continue;
 	}
 	
@@ -105,67 +165,23 @@ foreach ($cars as $car)
 	}
 	catch (Exception $e)
 	{
-		c_log('Mine insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
+		c_log('insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
 	}
 	
 	
 	// download image
 	$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT;
-	$fp = fopen($filename, 'wb');
 	
-	if ($fp === FALSE)
-		c_log('Mine download image failed for "' . $carDetails->id . '": "' . $filename . '" unable to open file');
-	else
+	if (downloadImage($filename, $carDetails->imageURL, $carDetails->id, 'icon') === 2)
 	{
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL,    $car->imageURL);
-		curl_setopt($ch, CURLOPT_FILE,   $fp);
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-		curl_exec($ch);
-		
-		fclose($fp);
-		
-		$cURLErrorNum = curl_errno($ch);
-		if ($cURLErrorNum !== 0)
-			c_log('Mine download image failed for "' . $carDetails->id . '": "' . $car->imageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
-		else
-		{
-			$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			if ($statusCode !== 200)
-				c_log('Mine download image failed for "' . $carDetails->id . '": "' . $car->imageURL . '" Request Error: Status code ' . $statusCode);
-		}
-		
-		curl_close($ch);
+		// try downloading and using the hover image
+		if (downloadImage($filename, substr($carDetails->imageURL, 0, -4) . '_hover.png', $carDetails->id, 'icon hover') === 1)
+			c_log('Succesfully downloaded the hover image as backup for "' . $carDetails->id . '"');
 	}
 	
 	// download detail image
 	$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
-	$fp = fopen($filename, 'wb');
-	
-	if ($fp === FALSE)
-		c_log('Mine download detail image failed for "' . $carDetails->id . '": "' . $filename . '" unable to open file');
-	else
-	{
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL,    $carDetails->detailImageURL);
-		curl_setopt($ch, CURLOPT_FILE,   $fp);
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-		curl_exec($ch);
-		
-		fclose($fp);
-		
-		$cURLErrorNum = curl_errno($ch);
-		if ($cURLErrorNum !== 0)
-			c_log('Mine download detail image failed for "' . $carDetails->id . '": "' . $carDetails->detailImageURL . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
-		else
-		{
-			$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			if ($statusCode !== 200)
-				c_log('Mine download detail image failed for "' . $carDetails->id . '": "' . $carDetails->detailImageURL . '" Request Error: Status code ' . $statusCode);
-		}
-		
-		curl_close($ch);
-	}
+	downloadImage($filename, $carDetails->detailImageURL, $carDetails->id, 'detail');
 	
 	// done
 	++$numMined;
