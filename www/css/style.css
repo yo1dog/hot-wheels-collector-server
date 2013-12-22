@@ -67,6 +67,14 @@ body
 	text-align: center;
 }
 
+.car-search-result .car-img
+{
+	display: block;
+	
+	width: 154px;
+	height: 161px;
+}
+
 .owned-banner
 {
 	position: absolute;
