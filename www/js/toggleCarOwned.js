@@ -30,6 +30,6 @@ function toggleCarOwned(elem)
 	};
 	
 	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-	xmlhttp.send("carID=" + encodeURIComponent(carID) + "&owned=" + (owned? "1" : "0"));
+	xmlhttp.send("userID=" + encodeURIComponent(__USER_ID) + "&carID=" + encodeURIComponent(carID) + "&owned=" + (owned? "1" : "0"));
 	return false;
 }

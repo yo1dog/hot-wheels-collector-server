@@ -64,13 +64,47 @@ class DB
 		return $cars;
 	}
 	
+	public function getCar($carID, $userID)
+	{
+		$query = 'SELECT *';
+		
+                if ($userID !== NULL)
+                        $query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+		
+                $query .= ' FROM cars WHERE id = "' . $this->mysqli->real_escape_string($carID) . '"';
+		
+                $success = $this->mysqli->real_query($query);
+                if (!$success)
+                        throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+                $result = $this->mysqli->store_result();
+                if ($result === false)
+                        throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$car = NULL;
+		$row = $result->fetch_row();
+                
+		if ($row)
+			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9], $userID !== NULL && $row[10] === '1');
+		
+                $result->close();
+		
+                return $car;	
+	}
+	
 	public function setCarOwned($userID, $carID)
 	{
 		$query = 'INSERT INTO collections (user_id, car_id) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string($carID) . '")';
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		{
+			$mysqlErrorNum = $this->mysqli->errno;
+			
+			// don't worry about duplicate unique keys. this just means the user already owns the car
+			if ($mysqlErrorNum !== 1062)
+				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		}
 	}
 	
 	public function setCarUnowned($userID, $carID)

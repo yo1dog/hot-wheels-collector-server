@@ -1,38 +1,33 @@
 <?php
 require 'includes/globals.php';
-require 'includes/hotWheelsAPI.php';
 require '../config.php';
+
+require 'includes/hotWheels2Models.php';
 require 'includes/database.php';
 require 'includes/templates.php';
+
+$db = new DB();
+$cars = $db->getCollection($__USER_ID);
+$db->close();
 
 include 'includes/header.php';
 
 echo '<br />';
 
-$db = new DB();
-$carIDs = $db->getCarsOwned();
-$db->close();
-
-foreach ($carIDs as $carID)
+if (count($cars))
 {
-	$result = HotWheelsAPI::getCarDetails($carID);
-	
-	if (is_string($result))
-		echo '<div class="car-search-result">', $carID, ':<br />', $result, '</div>';
-	else
-	{
-		$car = $result;
-		
-		$car->owned = true;
+	foreach ($cars as $car)
 		Templates::carSearchResult($car);
-	}
-}
-?>
+	?>
 
 <script type="text/javascript">
-<?php include "/js/toggleCarOwned.js"; ?>
+var __USER_ID =	"<?php echo $__USER_ID; ?>";
+
+<?php include "js/toggleCarOwned.js"; ?>
 </script>
 
-<?php
+	<?php
+}
+
 include 'includes/footer.html';
 ?>

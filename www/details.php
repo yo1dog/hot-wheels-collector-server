@@ -6,23 +6,25 @@ if (!isset($_GET['carID']))
 }
 
 require 'includes/globals.php';
-require 'includes/hotWheelsAPI.php';
 require '../config.php';
+
+require 'includes/hotWheels2Models.php';
 require 'includes/database.php';
 
-include 'includes/header.php';
-
 $carID = $_GET['carID'];
-$result = HotWheelsAPI::getCarDetails($carID);
 
-if (is_object($result))
+$db = new DB();
+$car = $db->getCar($carID, $__USER_ID);
+$db->close();
+
+if ($car === NULL)
 {
-	$car = $result;
-	
-	$db = new DB();
-	$db->checkCarsOwned(array($car));
-	$db->close();
-	?>
+	http_response_code(404);
+	die('carID "' . $carID . '" not found.');
+}
+
+include 'includes/header.php';
+?>
 
 <h1><?php echo $car->name; ?></h1>
 
@@ -64,13 +66,11 @@ if (is_object($result))
 </table>
 
 <script type="text/javascript">
+var __USER_ID =	"<?php echo $__USER_ID; ?>";
+
 <?php include 'js/toggleCarOwned.js'; ?>
 </script>
 
-	<?php
-}
-else
-	echo '<br /><div class="error">', htmlspecialchars($result), '</div>';
-
+<?php
 include 'includes/footer.html';
 ?>

@@ -1,16 +1,3 @@
-<?php
-session_start();
-
-$query = NULL;
-if (isset($_GET['query']))
-{
-	$query = $_GET['query'];
-	$_SESSION['query'] = $query;
-}
-else if (isset($_SESSION['query']))
-	$query = $_SESSION['query'];
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -26,7 +13,7 @@ else if (isset($_SESSION['query']))
 		<table>
 			<tbody>
 				<tr>
-					<td style="width: 100%; padding-left: 5px;"><input type="text" name="query" value="<?php if ($query !== NULL) echo htmlspecialchars($query) ?>" style="width: 100%;" /></td>
+					<td style="width: 100%; padding-left: 5px;"><input type="text" name="query" style="width: 100%;" value="<?php if (isset($_GET['query'])) echo htmlspecialchars($_GET['query']);  ?>" /></td>
 					<td style="padding-left: 20px;"><input type="submit" class="button" value="Search" /></td>
 					<td style="padding-left: 5px;"><input type="button" class="button" value="Collection" onclick="window.location='/collection.php';" /></td>
 				</tr>
