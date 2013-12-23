@@ -7,9 +7,9 @@ class DB
 	{
 		$this->mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
 		
-		$errorNum = $this->mysqli->connect_errno;
-		if ($errorNum !== 0)
-			throw new Exception('Database connect error (' . $errorNum . '): ' . $this->mysqli->connect_error);
+		$mysqlErrorNum = $this->mysqli->connect_errno;
+		if ($mysqlErrorNum !== 0)
+			throw new Exception('Database connect error (' . $mysqlErrorNum . '): ' . $this->mysqli->connect_error);
 		
 		if (!$this->mysqli->set_charset("utf8"))
 			throw new Exception('Error loading character set utf8: ' . $this->mysqli->error);
@@ -27,16 +27,16 @@ class DB
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$result = $this->mysqli->store_result();
 		if ($result === false)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9], $userID !== NULL && $row[10] === '1');
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
 		
 		$result->close();
 		
@@ -49,15 +49,15 @@ class DB
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$result = $this->mysqli->store_result();
 		if ($result === false)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9], true);
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], true);
 		
 		$result->close();
 		
@@ -68,29 +68,90 @@ class DB
 	{
 		$query = 'SELECT *';
 		
-                if ($userID !== NULL)
-                        $query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+		if ($userID !== NULL)
+				$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
 		
-                $query .= ' FROM cars WHERE id = "' . $this->mysqli->real_escape_string($carID) . '"';
+		$query .= ' FROM cars WHERE id = "' . $this->mysqli->real_escape_string($carID) . '"';
 		
-                $success = $this->mysqli->real_query($query);
-                if (!$success)
-                        throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
-                $result = $this->mysqli->store_result();
-                if ($result === false)
-                        throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$car = NULL;
 		$row = $result->fetch_row();
-                
+		
 		if ($row)
-			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9], $userID !== NULL && $row[10] === '1');
+			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[10] === '1');
 		
-                $result->close();
+		$result->close();
 		
-                return $car;	
+		return $car;	
 	}
+	
+	public function getMostCollectedCars($userID = NULL)
+	{
+		$query = 'SELECT *';
+		
+		if ($userID !== NULL)
+			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+		
+		$query .= ' FROM cars ORDER BY num_users_collected DESC LIMIT ' . HOTWHEELS2_MAX_NUM_MOST_COLLECTED;
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		
+		$cars = array();
+		while (($row = $result->fetch_row()) !== NULL)
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
+		
+		$result->close();
+		
+		return $cars;
+	}
+	
+	public function getCollectionRemovals($userID)
+	{
+		$query = '
+		SELECT
+			cars.*,
+			(
+				SELECT 1
+				FROM collections
+				WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id
+			) AS owned
+		FROM collection_removals
+		LEFT JOIN cars ON (cars.id = collection_removals.car_id)
+		WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" ORDER BY timestamp DESC LIMIT ' . HOTWHEELS2_MAX_NUM_REMOVALS;
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$cars = array();
+		while (($row = $result->fetch_row()) !== NULL)
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $row[11] === '1');
+		
+		$result->close();
+		
+		return $cars;
+	}
+	
+	
+	
 	
 	public function setCarOwned($userID, $carID)
 	{
@@ -103,7 +164,7 @@ class DB
 			
 			// don't worry about duplicate unique keys. this just means the user already owns the car
 			if ($mysqlErrorNum !== 1062)
-				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+				throw new Exception('MySQL Error (' . $mysqlErrorNum . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		}
 	}
 	
@@ -113,11 +174,60 @@ class DB
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		// make sure we actually deleted something
+		if ($this->mysqli->affected_rows > 0)
 		{
-			$errorNum = $this->mysqli->errno;
-			
-			if ($errorNum !== 1062)
-				throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			try
+			{
+				// insert the collection removal
+				$query = 'INSERT INTO collection_removals (user_id, car_id) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string($carID) . '")';
+				
+				$success = $this->mysqli->real_query($query);
+				if ($success)
+				{
+					// remove the last collection removal if we hit our max
+					$query = 'SELECT timestamp FROM collection_removals WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" ORDER BY timestamp DESC LIMIT ' . HOTWHEELS2_MAX_NUM_REMOVALS . ', 1';
+					
+					$success = $this->mysqli->real_query($query);
+					if (!$success)
+						throw new Exception('Failed to get oldest collecion removal. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+					
+					$result = $this->mysqli->store_result();
+					$row = $result->fetch_row();
+					$result->close();
+					
+					if ($row !== NULL)
+					{
+						// we have reached our limit, remove this and all older collection removals
+						$query = 'DELETE FROM collection_removals WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND timestamp <= "' . $row[0] . '"';
+						
+						$success = $this->mysqli->real_query($query);
+						if (!$success)
+							throw new Exception('Failed to remove old collecion removals. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+					}
+				}
+				else
+				{
+					$mysqlErrorNum = $this->mysqli->errno;
+					
+					// check if that there was already a colelction removal for that user and car
+					if ($mysqlErrorNum !== 1062)
+						throw new Exception('Failed to insert collection removal. MySQL Error (' . $mysqlErrorNum . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+					
+					// update the timestamp
+					$query = 'UPDATE collection_removals SET timestamp = NOW() WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = "' . $this->mysqli->real_escape_string($carID) . '"';
+					
+					$success = $this->mysqli->real_query($query);
+					if (!$success)
+						throw new Exception('Failed to update collecion removal timestamp. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+				}
+			}
+			catch(Exception $e)
+			{
+				error_log($e->getMessage());
+			}
 		}
 	}
 	
@@ -140,11 +250,11 @@ class DB
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$result = $this->mysqli->store_result();
 		if ($result === false)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		
 		$row = $result->fetch_row();
@@ -155,7 +265,7 @@ class DB
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
-			throw new Exception("MySQL Error (" . $this->mysqli->errno . "): " . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 	}
 	
 	
