@@ -92,6 +92,34 @@ class DB
 		return $car;	
 	}
 	
+	public function getCarByToyNumber($toyNumber, $userID)
+	{
+		$query = 'SELECT *';
+		
+		if ($userID !== NULL)
+				$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+		
+		$query .= ' FROM cars WHERE toy_number = "' . $this->mysqli->real_escape_string($toyNumber) . '"';
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$car = NULL;
+		$row = $result->fetch_row();
+		
+		if ($row)
+			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[10] === '1');
+		
+		$result->close();
+		
+		return $car;	
+	}
+	
 	public function getMostCollectedCars($userID = NULL)
 	{
 		$query = 'SELECT *';

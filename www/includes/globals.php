@@ -1,10 +1,27 @@
 <?php
 // exception handler
+class HTTPException extends Exception
+{
+	public $httpStatusCode;
+	
+	public function __construct($httpStatusCode, $message)
+	{
+		parent($httpStatusCode);
+		
+		$this->httpStatusCode = $httpStatusCode;
+	}
+}
+
+
 set_exception_handler('exception_handler');
 
 function exception_handler($exception)
 {
-	http_response_code(500);
+	if (isset($exception->httpStatusCode))
+		http_response_code($exception->httpStatusCode);
+	else
+		http_response_code(500);
+	
 	throw $exception;
 }
 
