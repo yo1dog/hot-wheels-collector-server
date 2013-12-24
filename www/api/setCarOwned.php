@@ -1,5 +1,6 @@
 <?php
-$_POST = $_GET; // for testing
+if (!isset($_POST['userID']))
+	$_POST = $_GET; // for testing
 
 if (!isset($_POST['userID']))
 {
