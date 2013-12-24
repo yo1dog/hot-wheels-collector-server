@@ -94,6 +94,12 @@ $db = new DB();
 $car = $db->getCarByToyNumber(strtoupper($toyNumber), $userID);
 $db->close();
 
+if ($car === NULL)
+{
+	http_response_code(404);
+	die('QR code produced toy number: "' . $toyNumber . '" which was not found.');
+}
+
 header('Content-type: application/json');
 echo json_encode($car);
 ?>
