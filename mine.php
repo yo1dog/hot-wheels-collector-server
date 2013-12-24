@@ -154,7 +154,7 @@ foreach ($cars as $car)
 		$db->insertOrUpdateCar(
 				$carDetails->id,
 				$name,
-				clean($carDetails->toyNumber),
+				strtoupper(clean($carDetails->toyNumber)),
 				clean($carDetails->segment),
 				clean($carDetails->series),
 				clean($carDetails->carNumber),
