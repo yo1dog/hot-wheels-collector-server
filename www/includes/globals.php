@@ -6,7 +6,7 @@ class HTTPException extends Exception
 	
 	public function __construct($httpStatusCode, $message)
 	{
-		parent($httpStatusCode);
+		parent::__construct($httpStatusCode);
 		
 		$this->httpStatusCode = $httpStatusCode;
 	}
