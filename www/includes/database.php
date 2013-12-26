@@ -18,12 +18,30 @@ class DB
 	
 	public function search($searchQuery, $userID = NULL)
 	{
+		$queryLike = NULL;
+		$terms = explode(' ', strtolower($searchQuery));
+		
+		foreach ($terms as $term)
+		{
+			if (strlen($term) === 0)
+				continue;
+			
+			if ($queryLike === NULL)
+				$queryLike = '';
+			else
+				$queryLike .= ' AND ';
+			
+			$queryLike .= 'sort_name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($term)) . '%"';
+		}
+		
 		$query = 'SELECT *';
 		
 		if ($userID !== NULL)
 			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
 		
-		$query .= ' FROM cars WHERE name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($searchQuery)) . '%" ORDER BY sort_name ASC LIMIT ' . HOTWHEELS2_MAX_NUM_SEARCH_RESULTS;
+		$query .= ' FROM cars WHERE ' . $queryLike . ' ORDER BY sort_name ASC LIMIT ' . HOTWHEELS2_MAX_NUM_SEARCH_RESULTS;
+		
+		
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -36,35 +54,6 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
-		
-		$result->close();
-		
-		if (count($cars) > 0)
-			return $cars;
-		
-		
-		// try toy number
-		$query = 'SELECT *';
-		
-		if ($userID !== NULL)
-			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
-		
-		$query .= ' FROM cars WHERE toy_number = "' . $this->mysqli->real_escape_string($searchQuery) . '" LIMIT 1';
-		
-		$success = $this->mysqli->real_query($query);
-		if (!$success)
-			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
-		
-		$result = $this->mysqli->store_result();
-		if ($result === false)
-			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
-		
-		
-		$cars = array();
-		
-		$row = $result->fetch_row();
-		if ($row !== NULL)
 			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
 		
 		$result->close();

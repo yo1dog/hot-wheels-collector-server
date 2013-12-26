@@ -15,6 +15,16 @@ $userID = isset($_GET['userID']) ? $_GET['userID'] : NULL;
 
 $db = new DB();
 $cars = $db->search($query, $userID);
+
+// try toy number
+if (count($cars) === 0)
+{
+	$car = $db->getCarByToyNumber(strtoupper(trim($query)), $userID);
+	
+	if ($car !== NULL)
+		$cars[] = $car;
+}
+
 $db->close();
 
 header('Content-type: application/json');
