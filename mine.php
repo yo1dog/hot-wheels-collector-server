@@ -124,6 +124,9 @@ foreach ($cars as $car)
 		$sortName = substr($sortName, 0, $index) . substr($sortName, $index + 1);
 	}
 	
+	if (strpos($sortName, 'the ') === 0)
+		$sortName = substr($sortName, 4);
+	
 	$sortName = str_replace(' ', '', $sortName);
 	
 	$matches;
