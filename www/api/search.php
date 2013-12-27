@@ -16,6 +16,12 @@ $userID = isset($_GET['userID']) ? $_GET['userID'] : NULL;
 $db = new DB();
 $cars = $db->search($query, $userID);
 
+if ($cars === NULL)
+{
+	http_response_code(400);
+	die('Invalid query. Nothing to search.');
+}
+
 // try toy number
 if (count($cars) === 0)
 {

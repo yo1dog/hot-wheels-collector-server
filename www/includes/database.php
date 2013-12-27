@@ -34,6 +34,9 @@ class DB
 			$queryLike .= 'sort_name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($term)) . '%"';
 		}
 		
+		if ($queryLike === NULL)
+			return NULL;
+
 		$query = 'SELECT *';
 		
 		if ($userID !== NULL)

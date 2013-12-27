@@ -26,5 +26,5 @@ function exception_handler($exception)
 }
 
 // TODO: user system
-$__USER_ID = '1';
+$__USER_ID = '2';
 ?>
