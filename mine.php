@@ -83,6 +83,115 @@ function downloadImage($filename, $url, $id, $imgType)
 }
 
 
+
+function mineCars($cars, $db)
+{
+	$failedCars = array();
+	
+	$numMined = 0;
+	foreach ($cars as $car)
+	{
+		if (strlen($car->id) === 0)
+			continue;
+		
+		// get details
+		$carDetails = HotWheelsAPI::getCarDetails($car->id);
+		
+		if (is_string($carDetails))
+		{
+			c_log('getCarDetails failed for "' . $car->id . '": ' . $carDetails);
+			
+			$failedCars[] = $car;
+			continue;
+		}
+		
+		$imageName = preg_replace('/[^a-zA-Z0-9]/', '_', $carDetails->id);
+		
+		// create sortname
+		$sortName = strtolower($carDetails->name);
+		$sortName = preg_replace('/[^a-z0-9 ]/', '', $sortName);
+		
+		if (preg_match('/^[0-9]+s/', $sortName))
+		{
+			$index = strpos($sortName, 's');
+			$sortName = substr($sortName, 0, $index) . substr($sortName, $index + 1);
+		}
+		
+		if (strpos($sortName, 'the ') === 0)
+			$sortName = substr($sortName, 4);
+		
+		$sortName = str_replace(' ', '', $sortName);
+		
+		$matches;
+		if (preg_match('/^[0-9]+/', $sortName, $matches))
+		{
+			if (count($matches) > 0)
+			{
+				$yearStr = $matches[0];			
+				$sortName = substr($sortName, strlen($yearStr)) . ' ' . $yearStr;
+			}
+		}
+		
+		
+		// insert or update db
+		try
+		{
+			$name = clean($carDetails->name);
+			
+			$ascii0 = ord($name[0]);
+			$ascii1 = ord($name[1]);
+			if ($ascii0 > 47 && $ascii0 < 58 &&
+				$ascii1 > 47 && $ascii1 < 58)
+			{
+				if ($name[2] === '\'' && $name[3] !== 's')
+					$name = '\'' . substr($name, 0, 2) . substr($str, 3);
+			}
+			
+			$db->insertOrUpdateCar(
+					$carDetails->id,
+					$name,
+					strtoupper(clean($carDetails->toyNumber)),
+					clean($carDetails->segment),
+					clean($carDetails->series),
+					clean($carDetails->carNumber),
+					clean($carDetails->color),
+					clean($carDetails->make),
+					$carDetails->numUsersCollected,
+					$imageName,
+					$sortName);
+		}
+		catch (Exception $e)
+		{
+			c_log('insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
+			
+			$failedCars[] = $car;
+			continue;
+		}
+		
+		
+		// download image
+		$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT;
+		
+		if (downloadImage($filename, $carDetails->imageURL, $carDetails->id, 'icon') === 2)
+		{
+			// try downloading and using the hover image
+			if (downloadImage($filename, substr($carDetails->imageURL, 0, -4) . '_hover.png', $carDetails->id, 'icon hover') === 1)
+				c_log('Succesfully downloaded the hover image as backup for "' . $carDetails->id . '"');
+		}
+		
+		// download detail image
+		$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		downloadImage($filename, $carDetails->detailImageURL, $carDetails->id, 'detail');
+		
+		// done
+		++$numMined;
+		echo 'Mined (', $numMined, ') "', $carDetails->id, '" - "', $carDetails->name, "\"\n";
+	}
+	
+	return $failedCars;
+}
+
+
 c_log('Mining Start');
 c_log('Searching...');
 $cars = HotWheelsAPI::search(' ', 300);
@@ -97,99 +206,26 @@ c_log('Done');
 
 $db = new DB();
 
-$numMined = 0;
-foreach ($cars as $car)
+$failedCars = mineCars($cars, $db);
+
+$numCarsFailed = count($failedCars);
+if ($numCarsFailed > 0)
 {
-	if (strlen($car->id) === 0)
-		continue;
+	$totalNumCars = count($cars);
 	
-	// get details
-	$carDetails = HotWheelsAPI::getCarDetails($car->id);
-	
-	if (is_string($carDetails))
+	if ($numCarsFailed > $totalNumCars / 4)
+		c_log($numCarsFailed . ' cars failed. This is more than 1/4th of the total cars (' . $totalNumCars . ') and will not rety.');
+	else
 	{
-		c_log('getCarDetails failed for "' . $car->id . '": ' . $carDetails);
-		continue;
-	}
-	
-	$imageName = preg_replace('/[^a-zA-Z0-9]/', '_', $carDetails->id);
-	
-	// create sortname
-	$sortName = strtolower($carDetails->name);
-	$sortName = preg_replace('/[^a-z0-9 ]/', '', $sortName);
-	
-	if (preg_match('/^[0-9]+s/', $sortName))
-	{
-		$index = strpos($sortName, 's');
-		$sortName = substr($sortName, 0, $index) . substr($sortName, $index + 1);
-	}
-	
-	if (strpos($sortName, 'the ') === 0)
-		$sortName = substr($sortName, 4);
-	
-	$sortName = str_replace(' ', '', $sortName);
-	
-	$matches;
-	if (preg_match('/^[0-9]+/', $sortName, $matches))
-	{
-		if (count($matches) > 0)
-		{
-			$yearStr = $matches[0];			
-			$sortName = substr($sortName, strlen($yearStr)) . ' ' . $yearStr;
-		}
-	}
-	
-	
-	// insert or update db
-	try
-	{
-		$name = clean($carDetails->name);
+		c_log($numCarsFailed . ' cars failed. Retrying those in 10 seconds...');
+		sleep(10);
 		
-		$ascii0 = ord($name[0]);
-		$ascii1 = ord($name[1]);
-		if ($ascii0 > 47 && $ascii0 < 58 &&
-			$ascii1 > 47 && $ascii1 < 58)
-		{
-			if ($name[2] === '\'' && $name[3] !== 's')
-				$name = '\'' . substr($name, 0, 2) . substr($str, 3);
-		}
+		$failedCars = mineCars($failedCars, $db);
 		
-		$db->insertOrUpdateCar(
-				$carDetails->id,
-				$name,
-				strtoupper(clean($carDetails->toyNumber)),
-				clean($carDetails->segment),
-				clean($carDetails->series),
-				clean($carDetails->carNumber),
-				clean($carDetails->color),
-				clean($carDetails->make),
-				$carDetails->numUsersCollected,
-				$imageName,
-				$sortName);
+		$numCarsFailed = count($failedCars);
+		if ($numCarsFailed > 0)
+			c_log($numCarsFailed . ' cars still failed after retry.');
 	}
-	catch (Exception $e)
-	{
-		c_log('insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
-	}
-	
-	
-	// download image
-	$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT;
-	
-	if (downloadImage($filename, $carDetails->imageURL, $carDetails->id, 'icon') === 2)
-	{
-		// try downloading and using the hover image
-		if (downloadImage($filename, substr($carDetails->imageURL, 0, -4) . '_hover.png', $carDetails->id, 'icon hover') === 1)
-			c_log('Succesfully downloaded the hover image as backup for "' . $carDetails->id . '"');
-	}
-	
-	// download detail image
-	$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
-	downloadImage($filename, $carDetails->detailImageURL, $carDetails->id, 'detail');
-	
-	// done
-	++$numMined;
-	echo 'Mined (', $numMined, ') "', $carDetails->id, '" - "', $carDetails->name, "\"\n";
 }
 
 $db->close();
