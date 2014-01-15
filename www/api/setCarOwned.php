@@ -1,8 +1,5 @@
 <?php
 if (!isset($_POST['userID']))
-	$_POST = $_GET; // for testing
-
-if (!isset($_POST['userID']))
 {
 	http_response_code(400);
 	die('"userID" missing from POST data.');
