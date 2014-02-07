@@ -303,17 +303,17 @@ $numCarsFailed = count($failedCarDetailURLs);
 if ($numCarsFailed > 0)
 {
 	if ($numCarsFailed > $totalNumCars / 4)
-		c_log($numCarsFailed . ' cars failed. This is more than 1/4th of the total cars (' . $totalNumCars . ') and will not rety.');
+		c_log($numCarsFailed . ' car' . ($numCarsFailed > 1 ? 's' : '') . ' failed. This is more than 1/4th of the total cars (' . $totalNumCars . ') and will not rety.');
 	else
 	{
-		c_log($numCarsFailed . ' cars failed. Retrying those in 10 seconds...');
+		c_log($numCarsFailed . ' car' . ($numCarsFailed > 1 ? 's' : '') . ' failed. Retrying those in 10 seconds...');
 		sleep(10);
 		
 		$failedCarDetailURLs = mineCars($failedCarDetailURLs, $db, $downloadImages, $updateImages);
 		
 		$numCarsFailed = count($failedCarDetailURLs);
 		if ($numCarsFailed > 0)
-			c_log($numCarsFailed . ' cars still failed after retry.');
+			c_log($numCarsFailed . ' car' . ($numCarsFailed > 1 ? 's' : '') . ' still failed after retry.');
 	}
 }
 
