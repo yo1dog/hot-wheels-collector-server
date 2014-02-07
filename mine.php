@@ -192,6 +192,18 @@ function mineCars($carDetailURLs, $db)
 }
 
 
+// check if this is a proccessor
+if (isset($argv[1])) 
+{
+	c_log('Proccessing ' . $argv[1]);
+	sleep(3);
+	
+	return;
+}
+
+
+
+
 c_log('Mining Start');
 c_log('Searching...');
 $carDetailURLs = HotWheelsAPI::search('corvette', 300);
@@ -202,8 +214,50 @@ if (is_string($carDetailURLs))
 	die();
 }
 
-c_log('Done');
+$totalNumCars = count($carDetailURLs);
 
+c_log('Done. Found ' . $totalNumCars . ' cars');
+
+// split the search results into sections
+c_log('Splitting cars into ' . MINE_NUM_PROCESSORS . ' files');
+
+$baseSectionLength = floor($totalNumCars / MINE_NUM_PROCESSORS);
+$remainder = $totalNumCars % MINE_NUM_PROCESSORS;
+
+$index = 0;
+for ($pn = 0; $pn < MINE_NUM_PROCESSORS; ++$pn)
+{
+	$filename = MINE_CAR_LIST_FILENAME_PREFIX . $pn;
+	$file = fopen($filename, 'w');
+	
+	if ($file === false)
+		throw new Exception('Unable to open file for writing: ' . $filename);
+	
+	
+	$length = $baseSectionLength;
+	
+	if ($remainder > 0)
+	{
+		++$length;
+		--$remainder;
+	}
+	
+	$endingIndex = $index + $length;
+	
+	for (; $index < $endingIndex; ++$index)
+		fwrite($file, $carDetailURLs[$index] . "\n");
+	
+	fclose($file);
+	c_log('Wrote ' . $length . ' cars to ' . $filename);
+}
+
+for ($pn = 0; $pn < MINE_NUM_PROCESSORS; ++$pn)
+{
+	c_log('Spawning processor ' . $pn);
+	 exec('nice php mine.php ' . $pn);
+}
+
+/*
 $db = new DB();
 
 $failedCarDetailURLs = mineCars($carDetailURLs, $db);
@@ -211,8 +265,6 @@ $failedCarDetailURLs = mineCars($carDetailURLs, $db);
 $numCarsFailed = count($failedCarDetailURLs);
 if ($numCarsFailed > 0)
 {
-	$totalNumCars = count($carDetailURLs);
-	
 	if ($numCarsFailed > $totalNumCars / 4)
 		c_log($numCarsFailed . ' cars failed. This is more than 1/4th of the total cars (' . $totalNumCars . ') and will not rety.');
 	else
@@ -230,4 +282,5 @@ if ($numCarsFailed > 0)
 
 $db->close();
 c_log('Mining Complete');
+*/
 ?>
