@@ -59,27 +59,32 @@ body
 	display: inline-block;
 	vertical-align: top;
 	
-	width: 160px;
-	margin: 5px;
+	width: 152px;
+	margin: 15px;
 	
 	position: relative;
 	
 	text-align: center;
+	
+	padding-bottom: 10px;
 }
 
 .car-search-result .car-img
 {
 	display: block;
+	width: 150px;
 	
-	width: 154px;
-	height: 161px;
+	border: 1px solid #000000;
+	border-radius: 5px;
+
 }
 
 .owned-banner
 {
 	position: absolute;
-	right: 0px;
-	top:   0px;
+	right: -20px;
+	top:   -20px;
+	z-index: 1000;
 	
 	line-height: 0px;
 }
@@ -109,6 +114,11 @@ body
 	padding-right: 64px;
 	padding-top: 64px;
 	padding-bottom: 32px;
+}
+
+.detail-car-img
+{
+	width: 320px;
 }
 
 .detail-table th

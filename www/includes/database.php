@@ -294,7 +294,7 @@ class DB
 		$imageName         = $this->mysqli->real_escape_string($imageName);
 		$sortName          = $this->mysqli->real_escape_string($sortName);
 		
-		$query = "SELECT 1 FROM cars WHERE toy_number = \"$toyNumber\"";
+		$query = "SELECT 1 FROM cars WHERE id = \"$id\"";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -307,7 +307,7 @@ class DB
 		
 		$row = $result->fetch_row();
 		if ($row[0] === '1')
-			$query = "UPDATE cars SET id = \"$id\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE toy_number = \"$toyNumber\"";
+			$query = "UPDATE cars SET name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"$id\"";
 		else
 			$query = "INSERT INTO cars (id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
 		
