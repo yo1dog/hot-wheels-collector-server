@@ -241,7 +241,7 @@ if ($updateImages)
 
 
 c_log('Searching...');
-$carDetailURLs = HotWheelsAPI::search('corvette', 300);
+$carDetailURLs = HotWheelsAPI::search(' ', 300);
 
 if (is_string($carDetailURLs))
 {
