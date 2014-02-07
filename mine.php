@@ -84,27 +84,31 @@ function downloadImage($filename, $url, $id, $imgType)
 
 
 
-function mineCars($cars, $db)
+function mineCars($carDetailURLs, $db)
 {
-	$failedCars = array();
+	$failedCarDetailURLs = array();
 	
 	$numMined = 0;
-	foreach ($cars as $car)
+	foreach ($carDetailURLs as $carDetailURL)
 	{
-		if (strlen($car->id) === 0)
-			continue;
-		
-		// get details
-		$carDetails = HotWheelsAPI::getCarDetails($car->id);
-		
-		if (is_string($carDetails))
+		if (strlen($carDetailURL) === 0)
 		{
-			c_log('getCarDetails failed for "' . $car->id . '": ' . $carDetails);
-			
-			$failedCars[] = $car;
+			c_log("empty car detail URL");
 			continue;
 		}
 		
+		// get details
+		$carDetails = HotWheelsAPI::getCarDetails($carDetailURL);
+		
+		if (is_string($carDetails))
+		{
+			c_log('getCarDetails failed for "' . $carDetailURL . '": ' . $carDetails);
+			
+			$failedCarDetailURLs[] = $carDetailURL;
+			continue;
+		}
+		
+		// create image name
 		$imageName = preg_replace('/[^a-zA-Z0-9]/', '_', $carDetails->id);
 		
 		// create sortname
@@ -133,29 +137,32 @@ function mineCars($cars, $db)
 		}
 		
 		
+		$name = clean($carDetails->name);
+		
+		// if the name starts with 80's change it to '80
+		/*
+		$ascii0 = ord($name[0]);
+		$ascii1 = ord($name[1]);
+		if ($ascii0 > 47 && $ascii0 < 58 &&
+			$ascii1 > 47 && $ascii1 < 58)
+		{
+			if ($name[2] === '\'' && $name[3] !== 's')
+				$name = '\'' . substr($name, 0, 2) . substr($str, 3);
+		}
+		*/
+		
 		// insert or update db
 		try
 		{
-			$name = clean($carDetails->name);
-			
-			$ascii0 = ord($name[0]);
-			$ascii1 = ord($name[1]);
-			if ($ascii0 > 47 && $ascii0 < 58 &&
-				$ascii1 > 47 && $ascii1 < 58)
-			{
-				if ($name[2] === '\'' && $name[3] !== 's')
-					$name = '\'' . substr($name, 0, 2) . substr($str, 3);
-			}
-			
 			$db->insertOrUpdateCar(
 					$carDetails->id,
 					$name,
 					strtoupper(clean($carDetails->toyNumber)),
 					clean($carDetails->segment),
 					clean($carDetails->series),
-					clean($carDetails->carNumber),
-					clean($carDetails->color),
 					clean($carDetails->make),
+					clean($carDetails->color),
+					clean($carDetails->style),
 					$carDetails->numUsersCollected,
 					$imageName,
 					$sortName);
@@ -164,41 +171,34 @@ function mineCars($cars, $db)
 		{
 			c_log('insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
 			
-			$failedCars[] = $car;
+			$failedCarDetailURLs[] = $carDetailURL;
 			continue;
 		}
 		
 		
-		// download image
-		$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT;
+		// download images
+		downloadImage(HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT,
+			$carDetails->getImageURL(MINE_CAR_IMAGE_WIDTH), $carDetails->id, 'icon');
 		
-		if (downloadImage($filename, $carDetails->imageURL, $carDetails->id, 'icon') === 2)
-		{
-			// try downloading and using the hover image
-			if (downloadImage($filename, substr($carDetails->imageURL, 0, -4) . '_hover.png', $carDetails->id, 'icon hover') === 1)
-				c_log('Succesfully downloaded the hover image as backup for "' . $carDetails->id . '"');
-		}
-		
-		// download detail image
-		$filename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
-		downloadImage($filename, $carDetails->detailImageURL, $carDetails->id, 'detail');
+		downloadImage(HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT,
+			$carDetails->getImageURL(MINE_CAR_DETAIL_IMAGE_WIDTH), $carDetails->id, 'detail');
 		
 		// done
 		++$numMined;
-		echo 'Mined (', $numMined, ') "', $carDetails->id, '" - "', $carDetails->name, "\"\n";
+		echo 'Mined (', $numMined, ') "', $carDetails->id, '" - "', $name, "\"\n";
 	}
 	
-	return $failedCars;
+	return $failedCarDetailURLs;
 }
 
 
 c_log('Mining Start');
 c_log('Searching...');
-$cars = HotWheelsAPI::search(' ', 300);
+$carDetailURLs = HotWheelsAPI::search('corvette', 300);
 
-if (is_string($cars))
+if (is_string($carDetailURLs))
 {
-	c_log('Search failed: ' . $cars);
+	c_log('Search failed: ' . $carDetailURLs);
 	die();
 }
 
@@ -206,12 +206,12 @@ c_log('Done');
 
 $db = new DB();
 
-$failedCars = mineCars($cars, $db);
+$failedCarDetailURLs = mineCars($carDetailURLs, $db);
 
-$numCarsFailed = count($failedCars);
+$numCarsFailed = count($failedCarDetailURLs);
 if ($numCarsFailed > 0)
 {
-	$totalNumCars = count($cars);
+	$totalNumCars = count($carDetailURLs);
 	
 	if ($numCarsFailed > $totalNumCars / 4)
 		c_log($numCarsFailed . ' cars failed. This is more than 1/4th of the total cars (' . $totalNumCars . ') and will not rety.');
@@ -220,9 +220,9 @@ if ($numCarsFailed > 0)
 		c_log($numCarsFailed . ' cars failed. Retrying those in 10 seconds...');
 		sleep(10);
 		
-		$failedCars = mineCars($failedCars, $db);
+		$failedCarDetailURLs = mineCars($failedCarDetailURLs, $db);
 		
-		$numCarsFailed = count($failedCars);
+		$numCarsFailed = count($failedCarDetailURLs);
 		if ($numCarsFailed > 0)
 			c_log($numCarsFailed . ' cars still failed after retry.');
 	}

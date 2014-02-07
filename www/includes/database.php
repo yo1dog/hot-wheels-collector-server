@@ -280,22 +280,21 @@ class DB
 		}
 	}
 	
-	
-	public function insertOrUpdateCar($id, $name, $toyNumber, $segment, $series, $carNumber, $color, $make, $numUsersCollected, $imageName, $sortName)
+	public function insertOrUpdateCar($id, $name, $toyNumber, $segment, $series, $make, $color, $style, $numUsersCollected, $imageName, $sortName)
 	{
 		$id                = $this->mysqli->real_escape_string($id);
 		$name              = $this->mysqli->real_escape_string($name);
 		$toyNumber         = $this->mysqli->real_escape_string($toyNumber);
 		$segment           = $this->mysqli->real_escape_string($segment);
 		$series            = $this->mysqli->real_escape_string($series);
-		$carNumber         = $this->mysqli->real_escape_string($carNumber);
-		$color             = $this->mysqli->real_escape_string($color);
 		$make              = $this->mysqli->real_escape_string($make);
+		$color             = $this->mysqli->real_escape_string($color);
+		$style             = $this->mysqli->real_escape_string($style);
 		$numUsersCollected = $numUsersCollected === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($numUsersCollected) . '"';
 		$imageName         = $this->mysqli->real_escape_string($imageName);
 		$sortName          = $this->mysqli->real_escape_string($sortName);
 		
-		$query = "SELECT 1 FROM cars WHERE id = \"$id\"";
+		$query = "SELECT 1 FROM cars WHERE toy_number = \"$toyNumber\"";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -308,9 +307,9 @@ class DB
 		
 		$row = $result->fetch_row();
 		if ($row[0] === '1')
-			$query = "UPDATE cars SET name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", car_number = \"$carNumber\", color = \"$color\", make = \"$make\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"$id\"";
+			$query = "UPDATE cars SET id = \"$id\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE toy_number = \"$toyNumber\"";
 		else
-			$query = "INSERT INTO cars (id, name, toy_number, segment, series, car_number, color, make, num_users_collected, image_name, sort_name) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$carNumber\", \"$color\", \"$make\", $numUsersCollected, \"$imageName\", \"$sortName\")";
+			$query = "INSERT INTO cars (id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)

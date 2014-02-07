@@ -1,6 +1,5 @@
 <?php
-define('HOTWHEELS_SEARCH_ENDPOINT_URL', 'http://www.hotwheels.com/CarCollections/DisplaySearchVehicles');
-define('HOTWHEELS_DETAIL_ENDPOINT_URL', 'http://www.hotwheels.com/CarCollections/GetVehicleDetail');
+define('HOTWHEELS_SEARCH_ENDPOINT_URL', 'http://www.hotwheels.com/CarCollectionsRWD/DisplaySearchVehicles');
 define('HOTWHEELS_BASE_IMAGE_URL',      'http://www.hotwheels.com');
 
 class Car
@@ -8,52 +7,68 @@ class Car
 	public $id;
 	public $name;
 	public $toyNumber;
-	public $imagePath;
-	public $imageURL;
-	public $owned;
-	
-	public function __construct($id, $name, $toyNumber, $imagePath)
-	{
-		$this->id        = $id;
-		$this->name      = $name;
-		$this->toyNumber = $toyNumber;
-		$this->imagePath = $imagePath;
-		$this->imageURL  = HOTWHEELS_BASE_IMAGE_URL . $imagePath;
-	}
-}
-
-class CarDetails extends Car
-{
-	public $detailImagePath;
-	public $detailImageURL;
 	public $segment;
 	public $series;
-	public $carNumber;
-	public $color;
 	public $make;
+	public $color;
+	public $style;
 	public $numUsersCollected;
+
+	private $imageURLBeforeWidth;
+	private $imageURLAfterWidth;
 	
-	public function __construct($id, $name, $toyNumber, $detailImagePath, $segment, $series, $carNumber, $color, $make, $numUsersCollected)
+	public function __construct(
+		$id,
+		$name,
+		$toyNumber,
+		$segment,
+		$series,
+		$make,
+		$color,
+		$style,
+		$numUsersCollected,
+		
+		$imagePath)
 	{
-		$imagePath = substr($detailImagePath, 0, strlen($detailImagePath) - 15) . 'chicklet_none.png';
-		
-		parent::__construct($id, $name, $toyNumber, $imagePath);
-		
+		$this->id                = $id;
+		$this->name              = $name;
+		$this->toyNumber         = $toyNumber;
 		$this->segment           = $segment;
 		$this->series            = $series;
-		$this->carNumber         = $carNumber;
-		$this->color             = $color;
 		$this->make              = $make;
+		$this->color             = $color;
+		$this->style             = $style;
 		$this->numUsersCollected = $numUsersCollected;
-		$this->detailImagePath   = $detailImagePath;
-		$this->detailImageURL    = HOTWHEELS_BASE_IMAGE_URL . $detailImagePath;
+		
+		// split the url on the image width
+		$index1 = strrpos($imagePath, '_w') + 2;
+		$index2 = NULL;		
+		
+		for ($i = $index1; $i < strlen($imagePath); ++$i)
+		{
+			$char = ord($imagePath[$i]);
+			
+			if ($char < 48 || $char > 57)
+			{
+				$index2 = $i;
+				break;
+			}
+		}
+		
+		$this->imageURLBeforeWidth = HOTWHEELS_BASE_IMAGE_URL . substr($imagePath, 0, $index1);
+		$this->imageURLAfterWidth = $index2 === NULL? '' : substr($imagePath, $index2);
+	}
+	
+	public function getImageURL($width)
+	{
+		return $this->imageURLBeforeWidth . $width . $this->imageURLAfterWidth;
 	}
 }
 
 
 class HotWheelsAPI
 {
-	private static function parseTagContents($str)
+	private static function decodeHTMLText($str)
 	{
 		$str = trim($str);
 		$str = html_entity_decode($str);
@@ -63,18 +78,26 @@ class HotWheelsAPI
 		return $str;
 	}
 	
-	
+	private static function parseSection($str, &$index, $startStr, $endStr)
+	{
+		$index  = strpos($str, $startStr, $index) + strlen($startStr);
+		$index2 = strpos($str, $endStr,   $index);
+		
+		return substr($str, $index, $index2 - $index);
+	}
+		
+
 	/**
-	 * Uses the HotWheels site search endpoint and parses the HTML response into Car Search Result Models.
+	 * Uses the HotWheels site search endpoint and parses the HTML response into a list of car detail URLs.
 	 *
-	 * Returns an array of Car Search Result Models on success or a string containing an error message.
+	 * Returns an array of car detailURLs on success or a string containing an error message.
 	 */
 	public static function search($query, $cURLTimeout = 30)
 	{
 		// create cURL request
 		$postFields = array(
 			'searchtext' => $query,
-			'pubId'      => '437',
+			'pubId'      => '838',
 			'locale'     => 'en-us');
 		
 		$ch = curl_init();
@@ -99,7 +122,22 @@ class HotWheelsAPI
 		if ($statusCode !== 200)
 			return 'Request Error: Status code ' . $statusCode;
 		
-		// parse out the cars
+		
+		// parse out the car ids
+		$carDetailURLs = array();
+		
+		$index = 0;
+		while (($index = strpos($cURLResult, 'href="', $index)) !== false)
+		{
+			$index += 6;
+			$index2 = strpos($cURLResult, '"', $index);
+			$carDetailURLs[] = substr($cURLResult, $index, $index2 - $index);
+		}
+		
+		return $carDetailURLs;
+		
+		
+		/*
 		$cars = array();
 		
 		$index = 0;
@@ -109,22 +147,23 @@ class HotWheelsAPI
 			$index2 = strpos($cURLResult, '"', $index);
 			$toyNumber = substr($cURLResult, $index, $index2 - $index);
 			
-			$index = strpos($cURLResult, 'src=', $index) + 5;
-			$index2 = strpos($cURLResult, '"', $index);
-			$imagePath = substr($cURLResult, $index, $index2 - $index);
-			
 			$index = strpos($cURLResult, 'carId=', $index) + 7;
 			$index2 = strpos($cURLResult, '"', $index);
 			$id = substr($cURLResult, $index, $index2 - $index);
 			
-			$index = strpos($cURLResult, '>', $index) + 1;
+			$index = strpos($cURLResult, 'src=', $index) + 5;
+			$index2 = strpos($cURLResult, '"', $index);
+			$imagePath = substr($cURLResult, $index, $index2 - $index);
+			
+			$index = strpos($cURLResult, 'title">', $index) + 7;
 			$index2 = strpos($cURLResult, '<', $index);
-			$name = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
+			$name = self::decodeHTMLText(substr($cURLResult, $index, $index2 - $index));
 			
 			$cars[] = new Car($id, $name, $toyNumber, $imagePath);
 		}
 		
 		return $cars;
+		*/
 	}
 	
 	
@@ -133,18 +172,12 @@ class HotWheelsAPI
 	 *
 	 * Returns a Car Model on success or a string containing an error message.
 	 */
-	public static function getCarDetails($carID)
+	public static function getCarDetails($carDetailURL, $cURLTimeout = 30)
 	{
 		// create cURL request
-		$postFields = array(
-			'vehicleId'    => $carID,
-			'segmentColor' => '#929392',
-			'locale'       => 'en-us');
-		
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL,            HOTWHEELS_DETAIL_ENDPOINT_URL);
-		curl_setopt($ch, CURLOPT_POST,           count($postFields));
-		curl_setopt($ch, CURLOPT_POSTFIELDS,     $postFields);
+		curl_setopt($ch, CURLOPT_URL,            $carDetailURL);
+		curl_setopt($ch, CURLOPT_TIMEOUT,        $cURLTimeout);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		
 		// execute cURL request
@@ -160,104 +193,53 @@ class HotWheelsAPI
 		
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
+		{
+			if ($statusCode === 404 || $statusCode === 500) // they poorly handle invalid/non-existant ids and causes a 500
+				return 'Car not found';
+
 			return 'Request Error: Status code ' . $statusCode;
-		
-		if (strlen($cURLResult) === 0)
-			return 'Car not found';
-		
-		$index = strpos($cURLResult, 'src=') + 5;
-		$index2 = strpos($cURLResult, '"', $index);
-		$imagePath = substr($cURLResult, $index, $index2 - $index);
-		
-		$index = strpos($cURLResult, '<h2', $index);
-		$index = strpos($cURLResult, '>', $index) + 1;
-		$index2 = strpos($cURLResult, '<', $index);
-		$name = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-		
-		$index = strpos($cURLResult, 'Segment:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$segment = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
 		}
-		else
-			$segment = '';
+
 		
-		$index = strpos($cURLResult, 'Series:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$series = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-		}
-		else
-			$series = '';
+		// parse the car
+		$index = 0;
 		
-		$index = strpos($cURLResult, 'Car Number:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$carNumber = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-		}
-		else
-			$carNumber = '';
+		// background-image: url(/en-us/Images/V5328_Toyota_Tundra_tcm838-123677_w351.png);
+		$imagePath = self::parseSection($cURLResult, $index, 'url(', ')');
 		
-		$index = strpos($cURLResult, 'Color:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$color = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-		}
-		else
-			$color = '';
+		// <a id="wantButton" class="btn btn-med " href="javascript:void(0)" data-action="wantit" carTitle="&#39;10 Toyota Tundra" mainImageUrl ="" vehicleId="tcm:838-123678" carId="V5328" wantHave="Want" segment="2012 New Models" series="" make="Toyota" color="Black" style="Truck" segmentColor="" ><span class="icon icon-star"></span>Want It</a>
+		$name      = self::decodeHTMLText(
+		             self::parseSection($cURLResult, $index, 'carTitle="',  '"'));
+		$id        = self::parseSection($cURLResult, $index, 'vehicleId="', '"');
+		$toyNumber = self::parseSection($cURLResult, $index, 'carId="',     '"');
+		$segment   = self::parseSection($cURLResult, $index, 'segment="',   '"');
+		$series    = self::parseSection($cURLResult, $index, 'series="',    '"');
+		$make      = self::parseSection($cURLResult, $index, 'make="',      '"');
+		$color     = self::parseSection($cURLResult, $index, 'color="',     '"');
+		$style     = self::parseSection($cURLResult, $index, 'style="',     '"');
 		
-		$index = strpos($cURLResult, 'Make:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$make = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-		}
-		else
-			$make = '';
+		// <li><span class="label">Collected:</span> <span class="value">13606</span></li>
+		$index = strpos($cURLResult, 'Collected:', $index);
+		$numUsersCollected = trim(self::parseSection($cURLResult, $index, 'value">', '<'));
 		
-		$index = strpos($cURLResult, 'Toy Number:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$toyNumber = self::parseTagContents(substr($cURLResult, $index, $index2 - $index));
-		}
-		else
-			$toyNumber = '';
-		
-		$index = strpos($cURLResult, 'Times Collected:');
-		if ($index !== false)
-		{
-			$index = strpos($cURLResult, 'car_detail_value', $index) + 18;
-			$index2 = strpos($cURLResult, '<', $index);
-			$numUsersCollectedStr = trim(substr($cURLResult, $index, $index2 - $index));
-			
-			$isInt = true;
-			for ($i = 0; $i < strlen($numUsersCollectedStr); ++$i)
-			{
-				$ascii = ord($numUsersCollectedStr[$i]);
-				if ($ascii < 48 || $ascii > 57)
-				{
-					$isInt = false;
-					break;
-				}
-			}
-			
-			$numUsersCollected = $isInt ? intval($numUsersCollectedStr) : NULL;
-		}
-		else
+		if (!is_numeric($numUsersCollected))
 			$numUsersCollected = NULL;
+		else
+			$numUsersCollected = intval($numUsersCollected);
 		
-		return new CarDetails($carID, $name, $toyNumber, $imagePath, $segment, $series, $carNumber, $color, $make, $numUsersCollected);
+		
+		return new Car(
+			$id,
+			$name,
+			$toyNumber,
+			$segment,
+			$series,
+			$make,
+			$color,
+			$style,
+			$numUsersCollected,
+			
+			$imagePath);
 	}
 }
 ?>

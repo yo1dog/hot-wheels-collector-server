@@ -14,4 +14,7 @@ define('HOTWHEELS2_MAX_NUM_MOST_COLLECTED', 20);
 define('HOTWHEELS2_MAX_NUM_REMOVALS',       20);
 
 define('MINE_LOG_FILE', '');
+
+define('MINE_CAR_IMAGE_WIDTH',        300);
+define('MINE_CAR_DETAIL_IMAGE_WIDTH', 640);
 ?>
