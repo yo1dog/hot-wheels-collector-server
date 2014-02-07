@@ -47,16 +47,16 @@ include 'includes/header.php';
 			<td><?php echo htmlspecialchars($car->series); ?></td>
 		</tr>
 		<tr>
-			<th>Car Number:</th>
-			<td><?php echo htmlspecialchars($car->carNumber); ?></td>
+			<th>Make:</th>
+			<td><?php echo htmlspecialchars($car->make); ?></td>
 		</tr>
 		<tr>
 			<th>Color:</th>
 			<td><?php echo htmlspecialchars($car->color); ?></td>
 		</tr>
 		<tr>
-			<th>Make:</th>
-			<td><?php echo htmlspecialchars($car->make); ?></td>
+			<th>Style:</th>
+			<td><?php echo htmlspecialchars($car->style); ?></td>
 		</tr>
 		<tr>
 			<th>Toy Number:</th>
