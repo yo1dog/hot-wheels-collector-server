@@ -1,4 +1,14 @@
 <?php
+/*
+php mine.php flag
+
+flags:
+noImages     - will not download any images
+updateImages - will download images for all cars even if they already exist
+
+php mine.php noImages
+*/
+
 require 'www/includes/hotWheelsAPI.php';
 require 'config.php';
 require 'www/includes/database.php';
@@ -26,7 +36,6 @@ function downloadImage($filename, $url, $id, $imgType)
 {
 	$fp = NULL;
 	$ch = NULL;
-	$result = 0;
 	
 	try
 	{
@@ -35,7 +44,7 @@ function downloadImage($filename, $url, $id, $imgType)
 		if ($fp === false)
 		{
 			c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $filename . '" unable to open file');
-			return 0;
+			return;
 		}
 		
 		$ch = curl_init();
@@ -49,25 +58,16 @@ function downloadImage($filename, $url, $id, $imgType)
 		
 		$cURLErrorNum = curl_errno($ch);
 		if ($cURLErrorNum !== 0)
-		{
-			c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $url . '" cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
-			$result = 2;
-		}
-		else
-		{
-			$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			
-			if ($statusCode !== 200)
-			{
-				c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $url . '" Request Error: Status code ' . $statusCode);
-				$result = 2;
-			}
-			else
-				$result = 1;
-		}
+			throw new Exception('cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
+		
+		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		if ($statusCode !== 200)
+			throw new Exception('Request Error: Status code ' . $statusCode);
 		
 		curl_close($ch);
 		$ch = NULL;
+		
+		c_log('Downloaded ' . $imgType . ' image for "' . $id . '"');
 	}
 	catch(Exception $e)
 	{
@@ -76,15 +76,20 @@ function downloadImage($filename, $url, $id, $imgType)
 		if ($ch)
 			curl_close($ch);
 		
-		c_log('Download ' . $imgType . ' image failed for "' . $id . '": ' . $e->getMessage());
+		c_log('Download ' . $imgType . ' image failed for "' . $id . '": "' . $url . '": ' . $e->getMessage());
+		
+		if (file_exists($filename))
+		{
+			if (!unlink($filename))
+			c_log('WARNING: unable to delete image file after failed download!');
+		}
 	}
-	
-	return $result;
 }
 
 
 
-function mineCars($carDetailURLs, $db)
+
+function mineCars($carDetailURLs, $db, $downloadImages, $updateImages)
 {
 	$failedCarDetailURLs = array();
 	
@@ -93,7 +98,7 @@ function mineCars($carDetailURLs, $db)
 	{
 		if (strlen($carDetailURL) === 0)
 		{
-			c_log("empty car detail URL");
+			c_log('empty car detail URL');
 			continue;
 		}
 		
@@ -175,13 +180,19 @@ function mineCars($carDetailURLs, $db)
 			continue;
 		}
 		
-		
 		// download images
-		downloadImage(HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT,
-			$carDetails->getImageURL(MINE_CAR_IMAGE_WIDTH), $carDetails->id, 'icon');
-		
-		downloadImage(HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT,
-			$carDetails->getImageURL(MINE_CAR_DETAIL_IMAGE_WIDTH), $carDetails->id, 'detail');
+		if ($downloadImages)
+		{
+			$iconFilename    = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_EXT;
+			$detailsFilename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+			
+			// check if they exist already
+			if (!file_exists($iconFilename) || $updateImages)
+				downloadImage($iconFilename, $carDetails->getImageURL(MINE_CAR_IMAGE_WIDTH), $carDetails->id, 'icon');
+			
+			if (!file_exists($detailsFilename) || $updateImages)
+				downloadImage($detailsFilename, $carDetails->getImageURL(MINE_CAR_DETAIL_IMAGE_WIDTH), $carDetails->id, 'detail');
+		}
 		
 		// done
 		++$numMined;
@@ -192,19 +203,43 @@ function mineCars($carDetailURLs, $db)
 }
 
 
+/*
 // check if this is a proccessor
-if (isset($argv[1])) 
+if (isset($argv[2])) 
 {
-	c_log('Proccessing ' . $argv[1]);
+	c_log('Proccessing ' . $argv[2]);
 	sleep(3);
 	
 	return;
 }
+*/
 
 
 
+$downloadImages = true;
+$updateImages   = false;
+
+foreach ($argv as $arg)
+{
+	if ($arg === 'noimages')
+		$downloadImages = false;
+	
+	if ($arg === 'updateimages')
+		$updateImages = true;
+}
+
+if (!$downloadImages && $updateImages)
+	c_log('WARNING: noimages and updateimages flags used. This does not make sense. Ignoring updateimages flag.');
 
 c_log('Mining Start');
+
+if (!$downloadImages)
+  c_log('NOT Downloading images!');
+
+if ($updateImages)
+  c_log('UPDATING images!');
+
+
 c_log('Searching...');
 $carDetailURLs = HotWheelsAPI::search('corvette', 300);
 
@@ -218,6 +253,7 @@ $totalNumCars = count($carDetailURLs);
 
 c_log('Done. Found ' . $totalNumCars . ' cars');
 
+/*
 // split the search results into sections
 c_log('Splitting cars into ' . MINE_NUM_PROCESSORS . ' files');
 
@@ -256,11 +292,12 @@ for ($pn = 0; $pn < MINE_NUM_PROCESSORS; ++$pn)
 	c_log('Spawning processor ' . $pn);
 	 exec('nice php mine.php ' . $pn);
 }
+*/
 
-/*
+
 $db = new DB();
 
-$failedCarDetailURLs = mineCars($carDetailURLs, $db);
+$failedCarDetailURLs = mineCars($carDetailURLs, $db, $downloadImages, $updateImages);
 
 $numCarsFailed = count($failedCarDetailURLs);
 if ($numCarsFailed > 0)
@@ -272,7 +309,7 @@ if ($numCarsFailed > 0)
 		c_log($numCarsFailed . ' cars failed. Retrying those in 10 seconds...');
 		sleep(10);
 		
-		$failedCarDetailURLs = mineCars($failedCarDetailURLs, $db);
+		$failedCarDetailURLs = mineCars($failedCarDetailURLs, $db, $downloadImages, $updateImages);
 		
 		$numCarsFailed = count($failedCarDetailURLs);
 		if ($numCarsFailed > 0)
@@ -282,5 +319,4 @@ if ($numCarsFailed > 0)
 
 $db->close();
 c_log('Mining Complete');
-*/
 ?>
