@@ -1,0 +1,30 @@
+HotWheels Image Proccesor
+
+
+
+Usage:
+hwip imagein.png imageout.png alphatolerance (0-253) padding
+
+
+alphatolerance:
+the alpha value a pixel must be greater than
+in order to be concidered a forground pixel and contribute to
+the bounding box.
+
+0 means only pixels that are 100% invisible are concidered
+background pixels.
+
+253 means only pixles that are 100% visible are concidered
+forground pixels.
+
+10-15 is usually a good range to account for noise.
+
+
+padding:
+the number of pixels to add to each side of the bounding box.
+
+
+Build:
+make
+
+Requires libpng
