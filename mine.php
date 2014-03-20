@@ -228,18 +228,16 @@ function updateCarImages($carDetailsList, $updateExistingImages, $redownloadBase
 			// check if base image already exists
 			if ($redownloadBaseImages || !file_exists($baseFilename))
 			{
-				echo  'Downloading base image...';
+				$url = $carDetails->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
+
+				c_log('Downloading base image: ' . $url);
 				
 				if (file_exists($baseFilename))
 				{
 					if (!unlink($baseFilename))
-					{
-						echo("\n");
 						c_log('WARNING: unable to delete existing base image file "' . $baseFilename . '" before re-download!');
-					}
 				}
 				
-				$url = $carDetails->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
 				try
 				{
 					downloadImage($baseFilename, $url);
@@ -248,20 +246,18 @@ function updateCarImages($carDetailsList, $updateExistingImages, $redownloadBase
 				{
 					++$numImageDownloadsFailed;
 					
-					echo("\n");
 					c_log('ERROR: download image failed for URL "' . $url . '": ' . $e->getMessage());
 					
 					if (file_exists($baseFilename))
 					{
 						if (!unlink($baseFilename))
-							c_log('WARNING: unable to delete base image file "' . $baseFilename . '" before failed download!');
+							c_log('WARNING: unable to delete base image file "' . $baseFilename . '" after failed download!');
 					}
 					
 					continue;
 				}
 				
 				++$numImagesDownloaded;
-				echo(" done\n");
 				
 				// trim background with hwip
 				if (!runExternal('hwip/hwip "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING, 'hwip'))
@@ -430,7 +426,7 @@ if ($numDetailURLsFailed > 0)
 		c_log($numDetailURLsTried . ' detail URLs tried');
 		c_log($numDetailURLsFailed . ' detail URLs failed');
 		c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
-		c_log('Found ' . $numCarDetails . ' cars');
+		c_log($numCarDetails . ' cars found');
 	}
 }
 

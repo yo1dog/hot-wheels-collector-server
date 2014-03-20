@@ -204,7 +204,10 @@ class HotWheelsAPI
 		// parse the car
 		$index = 0;
 		
+		// ::::: CAR IMAGE ::::
+		// ...
 		// background-image: url(/en-us/Images/V5328_Toyota_Tundra_tcm838-123677_w351.png);
+		$index = strpos($cURLResult, '::::: CAR IMAGE ::::', $index);
 		$imagePath = self::parseSection($cURLResult, $index, 'url(', ')');
 		
 		// <a id="wantButton" class="btn btn-med " href="javascript:void(0)" data-action="wantit" carTitle="&#39;10 Toyota Tundra" mainImageUrl ="" vehicleId="tcm:838-123678" carId="V5328" wantHave="Want" segment="2012 New Models" series="" make="Toyota" color="Black" style="Truck" segmentColor="" ><span class="icon icon-star"></span>Want It</a>
