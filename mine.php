@@ -224,7 +224,7 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 				++$numImagesDownloaded;
 				
 				// trim background with hwip
-				if (!runExternal('hwip/hwip "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING, 'hwip'))
+				if (!runExternal(MINE_HWIP_LOCATION . ' "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING, 'hwip'))
 				{
 					++$numUpdateImagesFailed;
 					
@@ -244,7 +244,7 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 					c_log('WARNING: unable to delete existing icon image file "' . $iconFilename . '" before update!');
 			}
 			
-			if (!runExternal('convert "' . $baseFilename . '" -resize ' . MINE_CAR_IMAGE_ICON_WIDTH . ' "' . $iconFilename . '"', 'convert'))
+			if (!runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . MINE_CAR_IMAGE_ICON_WIDTH . ' "' . $iconFilename . '"', 'convert'))
 			{
 				++$numUpdateImagesFailed;
 				
@@ -264,7 +264,7 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 					c_log('WARNING: unable to delete existing detail image file "' . $detailFilename . '" before update!');
 			}
 			
-			if (!runExternal('convert "' . $baseFilename . '" -resize ' . MINE_CAR_IMAGE_DETAIL_WIDTH . ' "' . $detailFilename . '"', 'convert'))
+			if (!runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . MINE_CAR_IMAGE_DETAIL_WIDTH . ' "' . $detailFilename . '"', 'convert'))
 			{
 				++$numUpdateImagesFailed;
 				
@@ -395,7 +395,7 @@ if ($numDetailURLsFailed > 0)
 		c_log('');
 		
 		sleep(10);
-		$detailURLsFailed = getCar($detailURLsFailed, $db, $cars);
+		$detailURLsFailed = getCars($detailURLsFailed, $db, $cars);
 		
 		c_log('');
 		c_log('*********************************************');

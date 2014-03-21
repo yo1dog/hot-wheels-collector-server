@@ -306,15 +306,16 @@ class DB
 		if ($result === false)
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
-		
 		$row = $result->fetch_row();
-		if ($row !== NULL)
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"{$row[0]}\"";
-		else
+		$carID = $row === NULL ? NULL : $row[0];
+		
+		if ($carID === NULL)
 		{
 			// check if the vehicle ID has changed
-			$query = "SELECT vehicle_id FROM cars WHERE name = \"$name\" AND toy_number = \"$toyNumber\" AND segment=\"$segment\" AND make=\"$name\"";
+			// see if there is a car with the same name, toy number, segment, and make
+			$query = "SELECT id FROM cars WHERE name = \"$name\" AND toy_number = \"$toyNumber\" AND segment=\"$segment\" AND make=\"$make\"";
 			
+			var_dump($query);
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
 				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
@@ -325,14 +326,15 @@ class DB
 			
 			$row = $result->fetch_row();
 			
+			// if there is, use its ID
 			if ($row !== NULL)
-			{
-				$car->vehicleID = $row[0];
-				$vehicleID = $this->mysqli->real_escape_string($car->vehicleID);
-			}
-		
-			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
+				$carID = $row[0];
 		}
+		
+		if ($carID !== NULL)
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_escape_string($carID) . "\"";
+		else
+			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)

@@ -16,12 +16,13 @@ define('HOTWHEELS2_MAX_NUM_MOST_COLLECTED', 20);
 define('HOTWHEELS2_MAX_NUM_REMOVALS',       20);
 
 define('MINE_LOG_FILE',                    '');
-// define('MINE_NUM_PROCESSORS',           10);
-// define('MINE_CAR_LIST_FILENAME_PREFIX', 'minelist');
 
 define('MINE_CAR_IMAGE_BASE_WIDTH',   960);
 define('MINE_CAR_IMAGE_WIDTH',        300);
 define('MINE_CAR_DETAIL_IMAGE_WIDTH', 640);
+
+define('MINE_HWIP_LOCATION',   '');
+define('MINE_CONVERT_LOCATION, 'convert');
 
 define('MINE_HWIP_ALPHA_THRESHOLD', 30);
 define('MINE_HWIP_PADDING',         30);
