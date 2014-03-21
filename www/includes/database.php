@@ -319,7 +319,6 @@ class DB
 			// see if there is a car with the same name, toy number, segment, and make
 			$query = "SELECT id FROM cars WHERE name = \"$name\" AND toy_number = \"$toyNumber\" AND segment=\"$segment\" AND make=\"$make\"";
 			
-			var_dump($query);
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
 				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
@@ -337,7 +336,7 @@ class DB
 		
 		if ($carID !== NULL)
 		{
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"{$row[0]}\"";
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_query($carID) . "\"";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
