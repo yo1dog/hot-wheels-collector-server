@@ -377,9 +377,6 @@ $numCarsUpdated   = $result->numCarsUpdated;
 $numCarsAdded     = $result->numCarsAdded;
 $detailURLsFailed = $result->detailURLsFailed;
 
-$totalNumCarsUpdated = $numCarsUpdated;
-$totalNumCarsAdded = $numCarsAdded;
-
 c_log('');
 c_log('*********************************************');
 c_log('');
@@ -422,9 +419,6 @@ if ($numDetailURLsFailed > 0)
 		$numCarsAdded     = $result->numCarsAdded;
 		$detailURLsFailed = $result->detailURLsFailed;
 		
-		$totalNumCarsUpdated += $numCarsUpdated;
-		$totalNumCarsAdded += $numCarsAdded;
-		
 		c_log('');
 		c_log('*********************************************');
 		c_log('');
@@ -443,9 +437,6 @@ if ($numDetailURLsFailed > 0)
 	}
 }
 
-$totalNumImagesDownloaded = 0;
-$totalNumImagesUpdated = 0;
-
 if (!$skipImages)
 {
 	c_log('');
@@ -455,11 +446,6 @@ if (!$skipImages)
 	c_log('');
 	
 	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
-	
-	$totalNumImagesDownloaded     = $result->numImagesDownloaded;
-	$toatlNumImageDownloadsFailed = $result->numImageDownloadsFailed;
-	$totalNumImagesUpdated        = $result->totalNumImagesUpdated;
-	$totalNumUpdateImagesFailed   = $result->numUpdateImagesFailed;
 	
 	c_log('');
 	c_log('*********************************************');
