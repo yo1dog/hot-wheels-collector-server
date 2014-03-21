@@ -4,7 +4,7 @@ define('HOTWHEELS_BASE_IMAGE_URL',      'http://www.hotwheels.com');
 
 class Car
 {
-	public $id;
+	public $vehicleID;
 	public $name;
 	public $toyNumber;
 	public $segment;
@@ -18,7 +18,7 @@ class Car
 	private $imageURLAfterWidth;
 	
 	public function __construct(
-		$id,
+		$vehicleID,
 		$name,
 		$toyNumber,
 		$segment,
@@ -30,7 +30,7 @@ class Car
 		
 		$imagePath)
 	{
-		$this->id                = $id;
+		$this->vehicleID         = $vehicleID;
 		$this->name              = $name;
 		$this->toyNumber         = $toyNumber;
 		$this->segment           = $segment;
@@ -83,14 +83,14 @@ class HotWheelsAPI
 		$index  = strpos($str, $startStr, $index) + strlen($startStr);
 		$index2 = strpos($str, $endStr,   $index);
 		
-		return substr($str, $index, $index2 - $index);
+		return self::decodeHTMLText(substr($str, $index, $index2 - $index));
 	}
 		
 
 	/**
 	 * Uses the HotWheels site search endpoint and parses the HTML response into a list of car detail URLs.
 	 *
-	 * Returns an array of car detailURLs on success or a string containing an error message.
+	 * Returns an array of car detail URLs on success or a string containing an error message.
 	 */
 	public static function search($query, $cURLTimeout = 30)
 	{
@@ -123,7 +123,7 @@ class HotWheelsAPI
 			return 'Request Error: Status code ' . $statusCode;
 		
 		
-		// parse out the car ids
+		// parse out the car detail URLs
 		$carDetailURLs = array();
 		
 		$index = 0;
@@ -135,35 +135,6 @@ class HotWheelsAPI
 		}
 		
 		return $carDetailURLs;
-		
-		
-		/*
-		$cars = array();
-		
-		$index = 0;
-		while (($index = strpos($cURLResult, 'cars=', $index)) !== false)
-		{
-			$index += 6;
-			$index2 = strpos($cURLResult, '"', $index);
-			$toyNumber = substr($cURLResult, $index, $index2 - $index);
-			
-			$index = strpos($cURLResult, 'carId=', $index) + 7;
-			$index2 = strpos($cURLResult, '"', $index);
-			$id = substr($cURLResult, $index, $index2 - $index);
-			
-			$index = strpos($cURLResult, 'src=', $index) + 5;
-			$index2 = strpos($cURLResult, '"', $index);
-			$imagePath = substr($cURLResult, $index, $index2 - $index);
-			
-			$index = strpos($cURLResult, 'title">', $index) + 7;
-			$index2 = strpos($cURLResult, '<', $index);
-			$name = self::decodeHTMLText(substr($cURLResult, $index, $index2 - $index));
-			
-			$cars[] = new Car($id, $name, $toyNumber, $imagePath);
-		}
-		
-		return $cars;
-		*/
 	}
 	
 	
@@ -172,7 +143,7 @@ class HotWheelsAPI
 	 *
 	 * Returns a Car Model on success or a string containing an error message.
 	 */
-	public static function getCarDetails($carDetailURL, $cURLTimeout = 30)
+	public static function getCar($carDetailURL, $cURLTimeout = 30)
 	{
 		// create cURL request
 		$ch = curl_init();
@@ -211,9 +182,8 @@ class HotWheelsAPI
 		$imagePath = self::parseSection($cURLResult, $index, 'url(', ')');
 		
 		// <a id="wantButton" class="btn btn-med " href="javascript:void(0)" data-action="wantit" carTitle="&#39;10 Toyota Tundra" mainImageUrl ="" vehicleId="tcm:838-123678" carId="V5328" wantHave="Want" segment="2012 New Models" series="" make="Toyota" color="Black" style="Truck" segmentColor="" ><span class="icon icon-star"></span>Want It</a>
-		$name      = self::decodeHTMLText(
-		             self::parseSection($cURLResult, $index, 'carTitle="',  '"'));
-		$id        = self::parseSection($cURLResult, $index, 'vehicleId="', '"');
+		$name      = self::parseSection($cURLResult, $index, 'carTitle="',  '"');
+		$vehicleID = self::parseSection($cURLResult, $index, 'vehicleId="', '"');
 		$toyNumber = self::parseSection($cURLResult, $index, 'carId="',     '"');
 		$segment   = self::parseSection($cURLResult, $index, 'segment="',   '"');
 		$series    = self::parseSection($cURLResult, $index, 'series="',    '"');
@@ -232,7 +202,7 @@ class HotWheelsAPI
 		
 		
 		return new Car(
-			$id,
+			$vehicleID,
 			$name,
 			$toyNumber,
 			$segment,

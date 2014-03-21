@@ -5,14 +5,16 @@ php mine.php searchTerm(optinal) flags
 searchTerm - (Optional) will use the given term to search the Hot Wheels site instead of " " which returns all cars
 
 flags:
+skipImages           - will not download or update any images
 updateExistingImages - will re-generate all icon and detail images even if they already exist.
 redownloadBaseImages - will download the base images used to generate the icon and detail images even if it already exists
 
 php mine.php corvette updateExistingImages
 */
 
-require 'www/includes/hotWheelsAPI.php';
 require 'config.php';
+require 'www/includes/globals.php';
+require 'www/includes/hotWheelsAPI.php';
 require 'www/includes/database.php';
 
 ini_set("error_log", MINE_LOG_FILE);
@@ -34,97 +36,59 @@ function clean($str)
 		str_replace('®', '', $str)));
 }
 
-function getCarDetails($detailURLs, $db, &$carDetailsList)
+function getCars($detailURLs, $db, &$cars)
 {
 	$detailURLsFailed = array();
 	
-	$carDetailNum = 0;
+	$detailURLNum = 0;
 	foreach ($detailURLs as $detailURL)
 	{
-		++$carDetailNum;
+		++$detailURLNum;
 		
-		echo "Trying detail URL ($carDetailNum): $detailURL\n";
+		echo "Trying detail URL ($detailURLNum): $detailURL\n";
 		
 		if (strlen($detailURL) === 0)
 		{
-			c_log('empty car detail URL');
+			c_log('empty detail URL');
 			continue;
 		}
 		
-		// get details
-		$carDetails = HotWheelsAPI::getCarDetails($detailURL);
+		// get car from details URL
+		$car = HotWheelsAPI::getCar($detailURL);
 		
-		if (is_string($carDetails))
+		if (is_string($car))
 		{
-			c_log('getCarDetails failed for "' . $detailURL . '": ' . $carDetails);
+			c_log('getCar failed for "' . $detailURL . '": ' . $car);
 			
 			$detailURLsFailed[] = $detailURL;
 			continue;
 		}
 		
-		$carDetails->id        = strtolower($carDetails->id);
-		$carDetails->name      = clean($carDetails->name);
-		$carDetails->toyNumber = strtoupper(clean($carDetails->toyNumber));
-		$carDetails->segment   = clean($carDetails->segment);
-		$carDetails->series    = clean($carDetails->series);
-		$carDetails->make      = clean($carDetails->make);
-		$carDetails->color     = clean($carDetails->color);
-		$carDetails->style     = clean($carDetails->style);
+		// clean the fields
+		$car->vehicleID = strtolower($car->vehicleID);
+		$car->name      = clean($car->name);
+		$car->toyNumber = strtoupper(clean($car->toyNumber));
+		$car->segment   = clean($car->segment);
+		$car->series    = clean($car->series);
+		$car->make      = clean($car->make);
+		$car->color     = clean($car->color);
+		$car->style     = clean($car->style);
 		
-		echo "Found car \"{$carDetails->id}\" - \"{$carDetails->toyNumber}\" - \"{$carDetails->name}\"\n";
+		// add image and sort name
+		$car->imageName = createCarImageName($car->vehicleID);
+		$car->sortName  = createCarSortName($car->name);
 		
-		// create image name
-		$imageName = preg_replace('/[^a-zA-Z0-9]/', '_', $carDetails->id);
-		$carDetails->imageName = $imageName;
-		
-		// create sortname
-		$sortName = strtolower($carDetails->name);
-		$sortName = preg_replace('/[^a-z0-9 ]/', '', $sortName);
-		
-		if (preg_match('/^[0-9]+s/', $sortName))
-		{
-			$index = strpos($sortName, 's');
-			$sortName = substr($sortName, 0, $index) . substr($sortName, $index + 1);
-		}
-		
-		if (strpos($sortName, 'the ') === 0)
-			$sortName = substr($sortName, 4);
-		
-		$sortName = str_replace(' ', '', $sortName);
-		
-		$matches;
-		if (preg_match('/^[0-9]+/', $sortName, $matches))
-		{
-			if (count($matches) > 0)
-			{
-				$yearStr = $matches[0];			
-				$sortName = substr($sortName, strlen($yearStr)) . ' ' . $yearStr;
-			}
-		}
-		
-		$carDetails->sortName = $sortName;
+		echo "Found car \"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"\n";
 		
 		// insert or update db
 		try
 		{
-			$db->insertOrUpdateCar(
-					$carDetails->id,
-					$carDetails->name,
-					$carDetails->toyNumber,
-					$carDetails->segment,
-					$carDetails->series,
-					$carDetails->make,
-					$carDetails->color,
-					$carDetails->style,
-					$carDetails->numUsersCollected,
-					$carDetails->imageName,
-					$carDetails->sortName);
-			
-			$carDetailsList[] = $carDetails;
+			$db->insertOrUpdateCar($car);
+			$cars[] = $car;
 		}
 		catch (Exception $e)
 		{
-			c_log('insertOrUpdateCar failed for "' . $carDetails->id . '": ' . $e->getMessage());
+			c_log('insertOrUpdateCar failed for "' . $car->vehicleID . '": ' . $e->getMessage());
 			
 			$detailURLsFailed[] = $detailURL;
 			continue;
@@ -204,7 +168,7 @@ function runExternal($cmd, $logName)
 	return true;
 }
 
-function updateCarImages($carDetailsList, $updateExistingImages, $redownloadBaseImages)
+function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 {
 	$numCarsUpdating = 0;
 	$numImagesDownloaded = 0;
@@ -212,23 +176,23 @@ function updateCarImages($carDetailsList, $updateExistingImages, $redownloadBase
 	$numUpdatedImages = 0;
 	$numUpdateImagesFailed = 0;
 	
-	foreach ($carDetailsList as $carDetails)
+	foreach ($cars as $car)
 	{
-		$iconFilename   = HOTWHEELS2_IMAGE_PATH . $carDetails->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-		$detailFilename = HOTWHEELS2_IMAGE_PATH . $carDetails->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		$iconFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
+		$detailFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
 		
 		// check if they exist already
 		if ($updateExistingImages || !file_exists($iconFilename) || !file_exists($detailFilename))
 		{
 			++$numCarsUpdating;
-			echo  "Updating images for \"{$carDetails->id}\" - \"{$carDetails->toyNumber}\" - \"{$carDetails->name}\"\n";
+			echo  "Updating images for \"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"\n";
 			
-			$baseFilename = HOTWHEELS2_IMAGE_PATH . $carDetails->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+			$baseFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX . HOTWHEELS2_IMAGE_EXT;
 			
 			// check if base image already exists
 			if ($redownloadBaseImages || !file_exists($baseFilename))
 			{
-				$url = $carDetails->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
+				$url = $car->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
 
 				c_log('Downloading base image: ' . $url);
 				
@@ -325,20 +289,36 @@ function updateCarImages($carDetailsList, $updateExistingImages, $redownloadBase
 	return $result;
 }
 
+$skipImages = false;
 $updateExistingImages = false;
 $redownloadBaseImages = false;
 $searchTerm = ' ';
 
 foreach ($argv as $arg)
 {
-	if ($arg === 'updateExistingImages')
+	if ($arg === 'skipImages')
+		$skipImages = true;
+	
+	else if ($arg === 'updateExistingImages')
 		$updateExistingImages = true;
 	
-	if ($arg === 'redownloadBaseImages')
+	else if ($arg === 'redownloadBaseImages')
 		$redownloadBaseImages = true;
 }
 
-if (isset($argv[1]) && $argv[1] !== 'updateExistingImages' && $argv[1] !== 'redownloadBaseImages')
+if ($skipImages && $updateExistingImages)
+{
+	c_log('ERROR: Cannot use skipImages and updateExistingImages flags together. Does not make sense.');
+	die();
+}
+
+if ($skipImages && $redownloadBaseImages)
+{
+	c_log('ERROR: Cannot use skipImages and redownloadBaseImages flags together. Does not make sense.');
+	die();
+}
+
+if (isset($argv[1]) && $argv[1] !== 'skipImages' && $argv[1] !== 'updateExistingImages' && $argv[1] !== 'redownloadBaseImages')
 	$searchTerm = $argv[1];
 
 c_log('******************************************************************************************');
@@ -347,6 +327,9 @@ c_log('* Mining Start');
 c_log('******************************************************************************************');
 c_log('******************************************************************************************');
 c_log('');
+
+if ($skipImages)
+  c_log('* Skipping images');
 
 if ($updateExistingImages)
   c_log('* Updating existing images');
@@ -375,21 +358,21 @@ c_log('* Mining Car Details');
 c_log('*********************************************');
 c_log('');
 
-$carDetailsList = array();
-$detailURLsFailed = getCarDetails($detailURLs, $db, $carDetailsList);
+$cars = array();
+$detailURLsFailed = getCars($detailURLs, $db, $cars);
 
 c_log('');
 c_log('*********************************************');
 c_log('');
 
 $numDetailURLsFailed = count($detailURLsFailed);
-$numCarDetails = count($carDetailsList);
-$numDetailURLsTried = $numCarDetails + $numDetailURLsFailed;
+$numCars = count($cars);
+$numDetailURLsTried = $numCars + $numDetailURLsFailed;
 
 c_log($numDetailURLsTried . ' detail URLs tried');
 c_log($numDetailURLsFailed . ' detail URLs failed');
 c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
-c_log($numCarDetails . ' cars found');
+c_log($numCars . ' cars found');
 
 if ($numDetailURLsTried === 0)
 {
@@ -412,7 +395,7 @@ if ($numDetailURLsFailed > 0)
 		c_log('');
 		
 		sleep(10);
-		$detailURLsFailed = getCarDetails($detailURLsFailed, $db, $carDetailsList);
+		$detailURLsFailed = getCar($detailURLsFailed, $db, $cars);
 		
 		c_log('');
 		c_log('*********************************************');
@@ -420,34 +403,37 @@ if ($numDetailURLsFailed > 0)
 		
 		$numDetailURLs = $numDetailURLsFailed;
 		$numDetailURLsFailed = count($detailURLsFailed);
-		$numCarDetails = count($carDetailsList) - $numCarDetails;
-		$numDetailURLsTried = $numCarDetails + $numDetailURLsFailed;
+		$numCars = count($cars) - $numCars;
+		$numDetailURLsTried = $numCars + $numDetailURLsFailed;
 		
 		c_log($numDetailURLsTried . ' detail URLs tried');
 		c_log($numDetailURLsFailed . ' detail URLs failed');
 		c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
-		c_log($numCarDetails . ' cars found');
+		c_log($numCars . ' cars found');
 	}
 }
 
-c_log('');
-c_log('*********************************************');
-c_log('* Mining Images');
-c_log('*********************************************');
-c_log('');
-
-$result = updateCarImages($carDetailsList, $updateExistingImages, $redownloadBaseImages);
-
-c_log('');
-c_log('*********************************************');
-c_log('');
-
-c_log($result->numCarsUpdating . ' cars updated');
-c_log((count($carDetailsList) - $result->numCarsUpdating) . ' cars skipped');
-c_log($result->numImagesDownloaded     . ' images downloaded');
-c_log($result->numImageDownloadsFailed . ' image downloads failed');
-c_log($result->numUpdatedImages        . ' images updated');
-c_log($result->numUpdateImagesFailed   . ' image updates failed');
+if (!$skipImages)
+{
+	c_log('');
+	c_log('*********************************************');
+	c_log('* Mining Images');
+	c_log('*********************************************');
+	c_log('');
+	
+	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
+	
+	c_log('');
+	c_log('*********************************************');
+	c_log('');
+	
+	c_log($result->numCarsUpdating . ' cars updated');
+	c_log((count($cars) - $result->numCarsUpdating) . ' cars skipped');
+	c_log($result->numImagesDownloaded     . ' images downloaded');
+	c_log($result->numImageDownloadsFailed . ' image downloads failed');
+	c_log($result->numUpdatedImages        . ' images updated');
+	c_log($result->numUpdateImagesFailed   . ' image updates failed');
+}
 
 $db->close();
 

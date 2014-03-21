@@ -39,6 +39,7 @@ class DB
 
 		$query = 'SELECT *';
 		
+		// todo: use join for is owned
 		if ($userID !== NULL)
 			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
 		
@@ -57,7 +58,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
 		
 		$result->close();
 		
@@ -78,7 +79,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], true);
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], true);
 		
 		$result->close();
 		
@@ -106,7 +107,7 @@ class DB
 		$row = $result->fetch_row();
 		
 		if ($row)
-			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
+			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
 		
 		$result->close();
 		
@@ -134,7 +135,7 @@ class DB
 		$row = $result->fetch_row();
 		
 		if ($row)
-			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
+			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
 		
 		$result->close();
 		
@@ -161,7 +162,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $userID !== NULL && $row[11] === '1');
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
 		
 		$result->close();
 		
@@ -192,7 +193,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8] === NULL ? NULL : intval($row[8]), $row[9], $row[10], $row[11] === '1');
+			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $row[12] === '1');
 		
 		$result->close();
 		
@@ -280,21 +281,22 @@ class DB
 		}
 	}
 	
-	public function insertOrUpdateCar($id, $name, $toyNumber, $segment, $series, $make, $color, $style, $numUsersCollected, $imageName, $sortName)
+	public function insertOrUpdateCar($car)
 	{
-		$id                = $this->mysqli->real_escape_string($id);
-		$name              = $this->mysqli->real_escape_string($name);
-		$toyNumber         = $this->mysqli->real_escape_string($toyNumber);
-		$segment           = $this->mysqli->real_escape_string($segment);
-		$series            = $this->mysqli->real_escape_string($series);
-		$make              = $this->mysqli->real_escape_string($make);
-		$color             = $this->mysqli->real_escape_string($color);
-		$style             = $this->mysqli->real_escape_string($style);
-		$numUsersCollected = $numUsersCollected === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($numUsersCollected) . '"';
-		$imageName         = $this->mysqli->real_escape_string($imageName);
-		$sortName          = $this->mysqli->real_escape_string($sortName);
+		$vehicleID         = $this->mysqli->real_escape_string($car->vehicleID);
+		$name              = $this->mysqli->real_escape_string($car->name);
+		$toyNumber         = $this->mysqli->real_escape_string($car->toyNumber);
+		$segment           = $this->mysqli->real_escape_string($car->segment);
+		$series            = $this->mysqli->real_escape_string($car->series);
+		$make              = $this->mysqli->real_escape_string($car->make);
+		$color             = $this->mysqli->real_escape_string($car->color);
+		$style             = $this->mysqli->real_escape_string($car->style);
+		$numUsersCollected = $car->numUsersCollected === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->numUsersCollected) . '"';
+		$imageName         = $this->mysqli->real_escape_string($car->imageName);
+		$sortName          = $this->mysqli->real_escape_string($car->sortName);
 		
-		$query = "SELECT 1 FROM cars WHERE id = \"$id\"";
+		// check if the vehicle ID exists
+		$query = "SELECT id FROM cars WHERE vehicle_id = \"$vehicleID\"";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -306,10 +308,31 @@ class DB
 		
 		
 		$row = $result->fetch_row();
-		if ($row[0] === '1')
-			$query = "UPDATE cars SET name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"$id\"";
+		if ($row !== NULL)
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"{$row[0]}\"";
 		else
-			$query = "INSERT INTO cars (id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$id\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
+		{
+			// check if the vehicle ID has changed
+			$query = "SELECT vehicle_id FROM cars WHERE name = \"$name\" AND toy_number = \"$toyNumber\" AND segment=\"$segment\" AND make=\"$name\"";
+			
+			$success = $this->mysqli->real_query($query);
+			if (!$success)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			
+			$result = $this->mysqli->store_result();
+			if ($result === false)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			
+			$row = $result->fetch_row();
+			
+			if ($row !== NULL)
+			{
+				$car->vehicleID = $row[0];
+				$vehicleID = $this->mysqli->real_escape_string($car->vehicleID);
+			}
+		
+			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
+		}
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
