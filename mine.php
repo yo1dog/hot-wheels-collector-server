@@ -38,6 +38,8 @@ function clean($str)
 
 function getCars($detailURLs, $db, &$cars)
 {
+	$numCarsUpdated = 0;
+	$numCarsAdded = 0;
 	$detailURLsFailed = array();
 	
 	$detailURLNum = 0;
@@ -83,8 +85,13 @@ function getCars($detailURLs, $db, &$cars)
 		// insert or update db
 		try
 		{
-			$db->insertOrUpdateCar($car);
+			$result = $db->insertOrUpdateCar($car);
 			$cars[] = $car;
+			
+			if ($result === 1)
+				++$numCarsUpdated;
+			else if ($result === 2)
+				++$numCarsAdded;
 		}
 		catch (Exception $e)
 		{
@@ -95,7 +102,12 @@ function getCars($detailURLs, $db, &$cars)
 		}
 	}
 	
-	return $detailURLsFailed;
+	$result = new stdClass;
+	$result->numCarsUpdated   = $numCarsUpdated;
+	$result->numCarsAdded     = $numCarsAdded;
+	$result->detailURLsFailed = $detailURLsFailed;
+	
+	return $result;
 }
 
 
@@ -359,7 +371,14 @@ c_log('*********************************************');
 c_log('');
 
 $cars = array();
-$detailURLsFailed = getCars($detailURLs, $db, $cars);
+$result = getCars($detailURLs, $db, $cars);
+
+$numCarsUpdated   = $result->numCarsUpdated;
+$numCarsAdded     = $result->numCarsAdded;
+$detailURLsFailed = $result->detailURLsFailed;
+
+$totalNumCarsUpdated = $numCarsUpdated;
+$totalNumCarsAdded = $numCarsAdded;
 
 c_log('');
 c_log('*********************************************');
@@ -373,6 +392,8 @@ c_log($numDetailURLsTried . ' detail URLs tried');
 c_log($numDetailURLsFailed . ' detail URLs failed');
 c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
 c_log($numCars . ' cars found');
+c_log($numCarsUpdated . ' cars updated');
+c_log($numCarsAdded . ' cars added');
 
 if ($numDetailURLsTried === 0)
 {
@@ -395,7 +416,14 @@ if ($numDetailURLsFailed > 0)
 		c_log('');
 		
 		sleep(10);
-		$detailURLsFailed = getCars($detailURLsFailed, $db, $cars);
+		$result = getCars($detailURLsFailed, $db, $cars);
+		
+		$numCarsUpdated   = $result->numCarsUpdated;
+		$numCarsAdded     = $result->numCarsAdded;
+		$detailURLsFailed = $result->detailURLsFailed;
+		
+		$totalNumCarsUpdated += $numCarsUpdated;
+		$totalNumCarsAdded += $numCarsAdded;
 		
 		c_log('');
 		c_log('*********************************************');
@@ -410,8 +438,13 @@ if ($numDetailURLsFailed > 0)
 		c_log($numDetailURLsFailed . ' detail URLs failed');
 		c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
 		c_log($numCars . ' cars found');
+		c_log($numCarsUpdated . ' cars updated');
+		c_log($numCarsAdded . ' cars added');
 	}
 }
+
+$totalNumImagesDownloaded = 0;
+$totalNumImagesUpdated = 0;
 
 if (!$skipImages)
 {
@@ -422,6 +455,11 @@ if (!$skipImages)
 	c_log('');
 	
 	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
+	
+	$totalNumImagesDownloaded     = $result->numImagesDownloaded;
+	$toatlNumImageDownloadsFailed = $result->numImageDownloadsFailed;
+	$totalNumImagesUpdated        = $result->totalNumImagesUpdated;
+	$totalNumUpdateImagesFailed   = $result->numUpdateImagesFailed;
 	
 	c_log('');
 	c_log('*********************************************');
@@ -438,5 +476,7 @@ if (!$skipImages)
 $db->close();
 
 c_log('');
+c_log('*********************************************');
 c_log('Mining Complete');
+c_log('*********************************************');
 ?>

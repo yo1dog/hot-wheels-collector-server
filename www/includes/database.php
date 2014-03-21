@@ -281,6 +281,10 @@ class DB
 		}
 	}
 	
+	// returns:
+	// 0 - nothing
+	// 1 - car updated
+	// 2 - car inserted
 	public function insertOrUpdateCar($car)
 	{
 		$vehicleID         = $this->mysqli->real_escape_string($car->vehicleID);
@@ -332,13 +336,25 @@ class DB
 		}
 		
 		if ($carID !== NULL)
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_escape_string($carID) . "\"";
+		{
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"{$row[0]}\"";
+			
+			$success = $this->mysqli->real_query($query);
+			if (!$success)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			
+			return $this->mysqli->affected_rows > 0? 1 : 0;
+		}
 		else
+		{
 			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
-		
-		$success = $this->mysqli->real_query($query);
-		if (!$success)
-			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			
+			$success = $this->mysqli->real_query($query);
+			if (!$success)
+				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			
+			return 2;
+		}
 	}
 	
 	
