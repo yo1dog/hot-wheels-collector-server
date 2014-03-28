@@ -285,7 +285,7 @@ class DB
 	// 0 - nothing
 	// 1 - car updated
 	// 2 - car inserted
-	public function insertOrUpdateCar($car)
+	public function insertOrUpdateCar($car, &$newCarID)
 	{
 		$vehicleID         = $this->mysqli->real_escape_string($car->vehicleID);
 		$name              = $this->mysqli->real_escape_string($car->name);
@@ -296,7 +296,6 @@ class DB
 		$color             = $this->mysqli->real_escape_string($car->color);
 		$style             = $this->mysqli->real_escape_string($car->style);
 		$numUsersCollected = $car->numUsersCollected === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->numUsersCollected) . '"';
-		$imageName         = $this->mysqli->real_escape_string($car->imageName);
 		$sortName          = $this->mysqli->real_escape_string($car->sortName);
 		
 		// check if the vehicle ID exists
@@ -336,24 +335,107 @@ class DB
 		
 		if ($carID !== NULL)
 		{
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, image_name = \"$imageName\", sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_query($carID) . "\"";
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_query($carID) . "\"";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
 				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 			
+			$newCarID = $carID;
 			return $this->mysqli->affected_rows > 0? 1 : 0;
 		}
 		else
 		{
-			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, image_name, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$imageName\", \"$sortName\")";
+			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$sortName\")";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
 				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 			
+			$newCarID = $this->mysqli->insert_id;
+			
+			if ($newCarID === 0)
+				throw new Exception('Unable to get last inserted id. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->errors);
+			
 			return 2;
 		}
+	}
+	
+	public function getCarImageName($carID)
+	{
+		$carID = $this->mysqli->real_escape_string($carID);
+		$query = "SELECT image_name FROM cars WHERE id=\"$carID\"";
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$row = $result->fetch_row();
+		
+		if ($row === NULL)
+			throw new Exception("Error getting image name: No car found with ID \"$carID\".");
+		
+		return $row[0];
+	}
+	
+	public function setCarImageName($carID, $imageName)
+	{
+		$carID     = $this->mysqli->real_escape_string($carID);
+		$imageName = $this->mysqli->real_escape_string($imageName);
+		
+		$query = "UPDATE cars SET image_name = \"$imageName\" WHERE id = \"$carID\"";
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		if ($this->mysqli->affected_rows === 0)
+			throw new Exception("Error setting image name: No cars affected with ID \"$carID\".");
+	}
+	
+	
+	public function insertCustomCar($name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData)
+	{
+		$name                = $this->mysqli->real_escape_string($name);
+		$segment             = $this->mysqli->real_escape_string($segment);
+		$series              = $this->mysqli->real_escape_string($series);
+		$make                = $this->mysqli->real_escape_string($make);
+		$color               = $this->mysqli->real_escape_string($color);
+		$style               = $this->mysqli->real_escape_string($style);
+		$sortName            = $this->mysqli->real_escape_string($sortName);
+		$customToyNumber     = $customToyNumber     === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($customToyNumber)     . '"';
+		$distinguishingNotes = $distinguishingNotes === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($distinguishingNotes) . '"';
+		$barcodeData         = $barcodeData         === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($barcodeData)         . '"';
+		
+		$query = "INSERT INTO cars (name, segment, series, make, color, style, sort_name, custom_toy_number, distinguishing_notes, barcode_data) VALUES (\"$name\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", \"$sortName\", $customToyNumber, $distinguishingNotes, $barcodeData)";
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$newCarID = $this->mysqli->insert_id;
+		
+		if ($newCarID === 0)
+			throw new Exception('Unable to get last inserted id. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->errors);
+		
+		return $newCarID;
+	}
+	
+	public function removeCar($carID)
+	{
+		$carID = $this->mysqli->real_escape_string($carID);
+		$query = "DELETE FROM cars WHERE id = \"$carID\"";
+		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		if ($this->mysqli->affected_rows === 0)
+			throw new Exception("Error removing car: No cars affected with ID \"$carID\".");
 	}
 	
 	

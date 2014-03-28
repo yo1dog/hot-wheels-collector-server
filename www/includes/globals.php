@@ -25,9 +25,16 @@ function exception_handler($exception)
 	throw $exception;
 }
 
-function createCarImageName($carVehicleID)
+function createCarImageName($id, $name)
 {
-	return preg_replace('/[^a-zA-Z0-9]/', '_', $carVehicleID);
+	$imageName = preg_replace('/[^a-zA-Z0-9 ]/', '', $name);
+	
+	if (strlen($imageName) > HOTWHEELS2_IMAGE_NAME_TRUNCATE_LENGTH)
+		$imageName = substr($imageName, 0, HOTWHEELS2_IMAGE_NAME_TRUNCATE_LENGTH);
+	
+	$imageName = str_replace(' ', '_', strtolower($imageName));
+	
+	return $id . '_' . $imageName;
 }
 
 function createCarSortName($carName)
@@ -57,6 +64,37 @@ function createCarSortName($carName)
 	}
 	
 	return $sortName;
+}
+
+function proccessCarBaseImage($baseFilename)
+{
+	return runExternal(MINE_HWIP_LOCATION . ' "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING, 'hwip');
+}
+
+function generateCarImage($baseFilename, $newFilename, $width)
+{
+	return runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . $width . ' "' . $newFilename . '"', 'convert');
+}
+
+function runExternal($cmd, $logName)
+{
+	$cmd .= ' 2>&1';
+	$output = array();
+	$status = -1;
+
+	exec($cmd, $output, $status);
+	
+	if ($status !== 0 || count($output) > 0)
+	{
+		return array(
+			'cmd'     => $cmd,
+			'output'  => $output,
+			'status'  => $status,
+			'logName' => $logName
+		);
+	}
+	
+	return true;
 }
 
 // TODO: user system

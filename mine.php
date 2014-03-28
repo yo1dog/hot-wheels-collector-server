@@ -25,6 +25,18 @@ function c_log($str)
 	echo $str, "\n";
 }
 
+function logExternalFailure($result)
+{
+	c_log('ERROR: ' . $result['logName'] . ' returned non-zero status (' . $result['status'] . ') or had output');
+	c_log('----------');
+	c_log($result['cmd']);
+	
+	foreach ($result['output'] as $line)
+		c_log($line);
+	
+	c_log('----------');
+}
+
 function clean($str)
 {
 	if (strlen($str) === 0)
@@ -76,8 +88,7 @@ function getCars($detailURLs, $db, &$cars)
 		$car->color     = clean($car->color);
 		$car->style     = clean($car->style);
 		
-		// add image and sort name
-		$car->imageName = createCarImageName($car->vehicleID);
+		// add sortname
 		$car->sortName  = createCarSortName($car->name);
 		
 		echo "Found car \"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"\n";
@@ -85,13 +96,25 @@ function getCars($detailURLs, $db, &$cars)
 		// insert or update db
 		try
 		{
-			$result = $db->insertOrUpdateCar($car);
+			$carID;
+			$result = $db->insertOrUpdateCar($car, $carID);
+			
 			$cars[] = $car;
 			
-			if ($result === 1)
-				++$numCarsUpdated;
-			else if ($result === 2)
+			if ($result === 2)
+			{
+				$car->imageName = createCarImageName($carID, $car->name);
+				$db->setCarImageName($carID, $car->imageName);
+				
 				++$numCarsAdded;
+			}
+			else
+			{
+				$car->imageName = $db->getCarImageName($carID);
+				
+				if ($result === 1)
+					++$numCarsUpdated;
+			}
 		}
 		catch (Exception $e)
 		{
@@ -156,30 +179,6 @@ function downloadImage($filename, $url)
 	}
 }
 
-function runExternal($cmd, $logName)
-{
-	$cmd .= ' 2>&1';
-	$output = array();
-	$status = -1;
-
-	exec($cmd, $output, $status);
-	
-	if ($status !== 0 || count($output) > 0)
-	{
-		c_log('ERROR: ' . $logName . ' returned non-zero status (' . $status . ') or had output');
-		c_log('----------');
-		c_log($cmd);
-		
-		foreach ($output as $line)
-			c_log($line);
-		
-		c_log('----------');
-		return false;
-	}
-	
-	return true;
-}
-
 function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 {
 	$numCarsUpdating = 0;
@@ -190,6 +189,7 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 	
 	foreach ($cars as $car)
 	{
+		$baseFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
 		$iconFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
 		$detailFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
 		
@@ -198,8 +198,6 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 		{
 			++$numCarsUpdating;
 			echo  "Updating images for \"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"\n";
-			
-			$baseFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX . HOTWHEELS2_IMAGE_EXT;
 			
 			// check if base image already exists
 			if ($redownloadBaseImages || !file_exists($baseFilename))
@@ -236,8 +234,11 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 				++$numImagesDownloaded;
 				
 				// trim background with hwip
-				if (!runExternal(MINE_HWIP_LOCATION . ' "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING, 'hwip'))
+				$result = proccessCarBaseImage($baseFilename);
+				if ($result !== true)
 				{
+					logExternalFailure($result);
+		
 					++$numUpdateImagesFailed;
 					
 					if (!unlink($baseFilename))
@@ -256,8 +257,11 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 					c_log('WARNING: unable to delete existing icon image file "' . $iconFilename . '" before update!');
 			}
 			
-			if (!runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . MINE_CAR_IMAGE_ICON_WIDTH . ' "' . $iconFilename . '"', 'convert'))
+			$result = generateCarImage($baseFilename, $iconFilename, MINE_CAR_IMAGE_ICON_WIDTH);
+			if ($result !== true)
 			{
+				logExternalFailure($result);
+				
 				++$numUpdateImagesFailed;
 				
 				if (file_exists($iconFilename))
@@ -276,8 +280,11 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 					c_log('WARNING: unable to delete existing detail image file "' . $detailFilename . '" before update!');
 			}
 			
-			if (!runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . MINE_CAR_IMAGE_DETAIL_WIDTH . ' "' . $detailFilename . '"', 'convert'))
+			$result = generateCarImage($baseFilename, $detailFilename, MINE_CAR_IMAGE_DETAIL_WIDTH);
+			if ($result !== true)
 			{
+				logExternalFailure($result);
+				
 				++$numUpdateImagesFailed;
 				
 				if (file_exists($detailFilename))

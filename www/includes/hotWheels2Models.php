@@ -30,8 +30,8 @@ class HW2Car
 		$this->style             = $style;
 		$this->numUsersCollected = $numUsersCollected;
 		
-		$this->imageURL       = HOTWHEELS2_BASE_IMAGE_URL . $imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-		$this->detailImageURL = HOTWHEELS2_BASE_IMAGE_URL . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		$this->imageURL       = $imageName === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
+		$this->detailImageURL = $imageName === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
 		
 		$this->owned = $owned;
 	}

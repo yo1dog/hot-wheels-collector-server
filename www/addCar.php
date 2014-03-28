@@ -10,7 +10,7 @@ include 'includes/header.php';
 
 <br />
 
-<form method="POST" action="/api/addNewCar.php" enctype="multipart/form-data">
+<form method="POST" action="/api/addCustomCar.php" enctype="multipart/form-data">
 	<table>
 		<tr>
 			<th><label for="name">Name:</label></th>
@@ -39,6 +39,10 @@ include 'includes/header.php';
 		<tr>
 			<th><label for="customToyNumber">Toy Number:</label></th>
 			<td><input type="text" name="customToyNumber" /></td>
+		</tr>
+		<tr>
+			<th><label for="customToyNumber">Barcode Data:</label></th>
+			<td><input type="text" name="barcodeData" /></td>
 		</tr>
 	</table>
 	
