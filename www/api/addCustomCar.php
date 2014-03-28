@@ -105,16 +105,6 @@ try
 			if (move_uploaded_file($_FILES['carPicture']['tmp_name'], $baseFilename) !== true)
 				throw new Exception('Error moving uploaded file from "' . $_FILES['carPicture']['tmp_name'] . '" to "' . $baseFilename . '"');
 			
-			// proccess base image
-			$result = proccessCarBaseImage($baseFilename);
-			if ($result !== true)
-			{
-				if (!unlink($baseFilename))
-					error_log('WARNING: unable to delete base image file "' . $baseFilename . '" after failed hwip!');
-				
-				throw new Exception('Error proccessing the base image: ' . print_r($result, true));
-			}
-			
 			// generate icon image
 			$result = generateCarImage($baseFilename, $iconFilename, MINE_CAR_IMAGE_ICON_WIDTH);
 			if ($result !== true)
