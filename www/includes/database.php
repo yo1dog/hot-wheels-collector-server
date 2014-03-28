@@ -213,9 +213,17 @@ class DB
 			$mysqlErrorNum = $this->mysqli->errno;
 			
 			// don't worry about duplicate unique keys. this just means the user already owns the car
-			if ($mysqlErrorNum !== 1062)
-				throw new Exception('MySQL Error (' . $mysqlErrorNum . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+			if ($mysqlErrorNum === 1062)
+				return true;
+			
+			// car or user does not exist
+			if ($mysqlErrorNum === 1452)
+				return false;
+			
+			throw new Exception('MySQL Error (' . $mysqlErrorNum . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		}
+		
+		return true;
 	}
 	
 	public function setCarUnowned($userID, $carID)

@@ -27,7 +27,13 @@ $owned  = $_POST['owned'] === '1';
 $db = new DB();
 
 if ($owned)
-	$db->setCarOwned($userID, $carID);
+{
+	if (!$db->setCarOwned($userID, $carID))
+	{
+		http_response_code(404);
+		die('No car or user was not found.');
+	}
+}
 else
 	$db->setCarUnowned($userID, $carID);
 
