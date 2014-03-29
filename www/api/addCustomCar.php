@@ -53,9 +53,6 @@ try
 	// create image name
 	$imageName = createCarImageName($carID, $name);
 	
-	// set image name
-	$db->setCarImageName($carID, $imageName);
-	
 	
 	// moved uploaded picture
 	if (isset($_FILES['carPicture']))
@@ -130,6 +127,9 @@ try
 				
 				throw new Exception('Error proccessing the detail image: ' . print_r($result, true));
 			}
+			
+			// set image name
+			$db->setCarImageName($carID, $imageName);
 		}
 	}
 }

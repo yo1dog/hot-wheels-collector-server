@@ -181,12 +181,15 @@ function downloadImage($filename, $url)
 
 function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 {
+	$downloadFailedForCars = array();
+	
 	$numCarsUpdating = 0;
 	$numImagesDownloaded = 0;
 	$numImageDownloadsFailed = 0;
 	$numUpdatedImages = 0;
 	$numUpdateImagesFailed = 0;
 	
+	$fail = count($cars) > 5? 3 : 0;
 	foreach ($cars as $car)
 	{
 		$baseFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
@@ -203,7 +206,9 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 			if ($redownloadBaseImages || !file_exists($baseFilename))
 			{
 				$url = $car->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
-
+				if ($fail-- > 0)
+					$url .= 'FAIL';
+				
 				c_log('Downloading base image: ' . $url);
 				
 				if (file_exists($baseFilename))
@@ -228,6 +233,7 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 							c_log('WARNING: unable to delete base image file "' . $baseFilename . '" after failed download!');
 					}
 					
+					$downloadFailedForCars[] = $car;
 					continue;
 				}
 				
@@ -299,6 +305,7 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 	}
 	
 	$result = new stdClass();
+	$result->downloadFailedForCars   = $downloadFailedForCars;
 	$result->numCarsUpdating         = $numCarsUpdating;
 	$result->numImagesDownloaded     = $numImagesDownloaded;
 	$result->numImageDownloadsFailed = $numImageDownloadsFailed;
@@ -453,6 +460,7 @@ if (!$skipImages)
 	c_log('');
 	
 	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
+	$numImageDownloadsFailed = count($result->$downloadFailedForCars);
 	
 	c_log('');
 	c_log('*********************************************');
@@ -461,9 +469,42 @@ if (!$skipImages)
 	c_log($result->numCarsUpdating . ' cars updated');
 	c_log((count($cars) - $result->numCarsUpdating) . ' cars skipped');
 	c_log($result->numImagesDownloaded     . ' images downloaded');
-	c_log($result->numImageDownloadsFailed . ' image downloads failed');
+	c_log($numImageDownloadsFailed . ' image downloads failed');
 	c_log($result->numUpdatedImages        . ' images updated');
 	c_log($result->numUpdateImagesFailed   . ' image updates failed');
+	
+	if ($numImageDownloadsFailed > 0)
+	{
+		c_log('');
+
+		$numImageDownloadsTried = $numImageDownloadsFailed + $result->numImagesDownloaded;
+		
+		if ($numImageDownloadsFailed > $numImageDownloadsTried * 0.25 && $numImageDownloadsFailed > 20)
+			c_log($numImageDownloadsFailed . ' image downloads failed. This is more than 1/4th of the total image downloads tried (' . $numImageDownloadsTried . ') and more than 20 and will not rety.');
+		else
+		{
+			c_log($numImageDownloadsTried . ' image downloads failed. Retrying those in 10 seconds...');
+			c_log('');
+			c_log('*********************************************');
+			c_log('');
+	
+			sleep(10);
+			$result = updateCarImages($result->$downloadFailedForCars, $updateExistingImages, $redownloadBaseImages);
+			$numImageDownloadsFailedOld = $numImageDownloadsFailed;
+			$numImageDownloadsFailed = count($result->$downloadFailedForCars);
+			
+			c_log('');
+			c_log('*********************************************');
+			c_log('');
+			
+			c_log($result->numCarsUpdating . ' cars updated');
+			c_log(($numImageDownloadsFailedOld - $result->numCarsUpdating) . ' cars skipped');
+			c_log($result->numImagesDownloaded     . ' images downloaded');
+			c_log($numImageDownloadsFailed . ' image downloads failed');
+			c_log($result->numUpdatedImages        . ' images updated');
+			c_log($result->numUpdateImagesFailed   . ' image updates failed');
+		}
+	}
 }
 
 $db->close();
