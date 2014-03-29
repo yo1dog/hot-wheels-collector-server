@@ -9,7 +9,7 @@ function postParam($postParamName)
 	if (!isset($_POST[$postParamName]))
 	{
 		http_response_code(400);
-		die('"' . $requriedPostParam . '" missing from query string.');
+		die('"' . $postParamName . '" missing from query string.');
 	}
 	
 	return trim($_POST[$postParamName]);
