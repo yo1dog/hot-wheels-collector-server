@@ -185,11 +185,10 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 	
 	$numCarsUpdating = 0;
 	$numImagesDownloaded = 0;
-	$numImageDownloadsFailed = 0;
 	$numUpdatedImages = 0;
 	$numUpdateImagesFailed = 0;
 	
-	$fail = count($cars) > 5? 3 : 0;
+	$fail = count($cars) > 3? 3 : 0;
 	foreach ($cars as $car)
 	{
 		$baseFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
@@ -223,8 +222,6 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 				}
 				catch (Exception $e)
 				{
-					++$numImageDownloadsFailed;
-					
 					c_log('ERROR: download image failed for URL "' . $url . '": ' . $e->getMessage());
 					
 					if (file_exists($baseFilename))
@@ -308,7 +305,6 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 	$result->downloadFailedForCars   = $downloadFailedForCars;
 	$result->numCarsUpdating         = $numCarsUpdating;
 	$result->numImagesDownloaded     = $numImagesDownloaded;
-	$result->numImageDownloadsFailed = $numImageDownloadsFailed;
 	$result->numUpdatedImages        = $numUpdatedImages;
 	$result->numUpdateImagesFailed   = $numUpdateImagesFailed;
 	
@@ -460,7 +456,7 @@ if (!$skipImages)
 	c_log('');
 	
 	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
-	$numImageDownloadsFailed = count($result->$downloadFailedForCars);
+	$numImageDownloadsFailed = count($result->downloadFailedForCars);
 	
 	c_log('');
 	c_log('*********************************************');
@@ -483,15 +479,15 @@ if (!$skipImages)
 			c_log($numImageDownloadsFailed . ' image downloads failed. This is more than 1/4th of the total image downloads tried (' . $numImageDownloadsTried . ') and more than 20 and will not rety.');
 		else
 		{
-			c_log($numImageDownloadsTried . ' image downloads failed. Retrying those in 10 seconds...');
+			c_log($numImageDownloadsFailed . ' image downloads failed. Retrying those in 10 seconds...');
 			c_log('');
 			c_log('*********************************************');
 			c_log('');
 	
 			sleep(10);
-			$result = updateCarImages($result->$downloadFailedForCars, $updateExistingImages, $redownloadBaseImages);
+			$result = updateCarImages($result->downloadFailedForCars, $updateExistingImages, $redownloadBaseImages);
 			$numImageDownloadsFailedOld = $numImageDownloadsFailed;
-			$numImageDownloadsFailed = count($result->$downloadFailedForCars);
+			$numImageDownloadsFailed = count($result->downloadFailedForCars);
 			
 			c_log('');
 			c_log('*********************************************');
