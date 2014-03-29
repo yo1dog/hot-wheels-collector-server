@@ -1,6 +1,8 @@
 /logs
 /config.php
 /.project
+/.buildpath
+/.settings
 /www/img/cars
 _notes
 minelist*

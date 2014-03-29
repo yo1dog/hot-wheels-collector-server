@@ -57,8 +57,8 @@ class DB
 		
 		
 		$cars = array();
-		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
+		while (($row = $result->fetch_assoc()) !== NULL)
+			$cars[] = new HW2Car($row);
 		
 		$result->close();
 		
@@ -78,8 +78,8 @@ class DB
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$cars = array();
-		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], true);
+		while (($row = $result->fetch_assoc()) !== NULL)
+			$cars[] = new HW2Car($row);
 		
 		$result->close();
 		
@@ -104,10 +104,10 @@ class DB
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$car = NULL;
-		$row = $result->fetch_row();
+		$row = $result->fetch_assoc();
 		
 		if ($row)
-			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
+			$car = new HW2Car($row);
 		
 		$result->close();
 		
@@ -132,10 +132,10 @@ class DB
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$car = NULL;
-		$row = $result->fetch_row();
+		$row = $result->fetch_assoc();
 		
 		if ($row)
-			$car = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
+			$car = new HW2Car($row);
 		
 		$result->close();
 		
@@ -161,8 +161,8 @@ class DB
 		
 		
 		$cars = array();
-		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $userID !== NULL && $row[12] === '1');
+		while (($row = $result->fetch_assoc()) !== NULL)
+			$cars[] = new HW2Car($row);
 		
 		$result->close();
 		
@@ -192,8 +192,8 @@ class DB
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
 		$cars = array();
-		while (($row = $result->fetch_row()) !== NULL)
-			$cars[] = new HW2Car($row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7], $row[8], $row[9] === NULL ? NULL : intval($row[9]), $row[10], $row[11], $row[12] === '1');
+		while (($row = $result->fetch_assoc()) !== NULL)
+			$cars[] = new HW2Car($row);
 		
 		$result->close();
 		
