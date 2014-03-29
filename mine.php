@@ -48,6 +48,49 @@ function clean($str)
 		str_replace('®', '', $str)));
 }
 
+function formatDuration($seconds)
+{
+	$mins  = floor($seconds / 60);
+	$hours = floor($mins / 60);
+	$days  = floor($hours / 24);
+	
+	$seconds = $seconds % 60;
+	$mins    = $mins % 60;
+	$hours   = $hours % 24;
+	
+	$str = '';
+	
+	if ($days > 0)
+		$str .= $days . 'd';
+	if ($hours > 0)
+	{
+		if (strlen($str) > 0)
+			$str .= ' ';
+		
+		$str .= $hours . 'h';
+	}
+	if ($mins > 0)
+	{
+		if (strlen($str) > 0)
+			$str .= ' ';
+		
+		$str .= $mins . 'm';
+	}
+	
+	if ($seconds > 0)
+	{
+		if (strlen($str) > 0)
+			$str .= ' ';
+		
+		$str .= $seconds . 's';
+	}
+	
+	if (strlen($str) === 0)
+		return '0s';
+	
+	return $str;
+}
+
 function getCars($detailURLs, $db, &$cars)
 {
 	$numCarsUpdated = 0;
@@ -55,9 +98,15 @@ function getCars($detailURLs, $db, &$cars)
 	$detailURLsFailed = array();
 	
 	$detailURLNum = 0;
+	$first = true;
 	foreach ($detailURLs as $detailURL)
 	{
 		++$detailURLNum;
+		
+		if ($first)
+			$first = false;
+		else
+			echo "\n";
 		
 		echo "Trying detail URL ($detailURLNum): $detailURL\n";
 		
@@ -188,9 +237,14 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 	$numUpdatedImages = 0;
 	$numUpdateImagesFailed = 0;
 	
-	$fail = count($cars) > 3? 3 : 0;
+	$first = true;
 	foreach ($cars as $car)
 	{
+		if ($first)
+			$first = false;
+		else
+			echo "\n";
+			
 		$baseFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
 		$iconFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
 		$detailFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
@@ -205,8 +259,6 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 			if ($redownloadBaseImages || !file_exists($baseFilename))
 			{
 				$url = $car->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
-				if ($fail-- > 0)
-					$url .= 'FAIL';
 				
 				c_log('Downloading base image: ' . $url);
 				
@@ -361,7 +413,10 @@ if ($redownloadBaseImages)
 
 c_log('');
 c_log('Searching' . ($searchTerm === ' ' ? '' : ' "' . $searchTerm . '"') . '...');
+
+$startTime = time();
 $detailURLs = HotWheelsAPI::search($searchTerm, 300);
+$endTime = time();
 
 if (is_string($detailURLs))
 {
@@ -371,6 +426,7 @@ if (is_string($detailURLs))
 
 $numDetailURLs = count($detailURLs);
 c_log('Done. Found ' . $numDetailURLs . ' detail URLs');
+c_log('Took ' . formatDuration($endTime - $startTime));
 
 $db = new DB();
 
@@ -381,7 +437,10 @@ c_log('*********************************************');
 c_log('');
 
 $cars = array();
+
+$startTime = time();
 $result = getCars($detailURLs, $db, $cars);
+$endTime = time();
 
 $numCarsUpdated   = $result->numCarsUpdated;
 $numCarsAdded     = $result->numCarsAdded;
@@ -395,6 +454,7 @@ $numDetailURLsFailed = count($detailURLsFailed);
 $numCars = count($cars);
 $numDetailURLsTried = $numCars + $numDetailURLsFailed;
 
+c_log('Took ' . formatDuration($endTime - $startTime));
 c_log($numDetailURLsTried . ' detail URLs tried');
 c_log($numDetailURLsFailed . ' detail URLs failed');
 c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
@@ -423,7 +483,10 @@ if ($numDetailURLsFailed > 0)
 		c_log('');
 		
 		sleep(10);
+		
+		$startTime = time();
 		$result = getCars($detailURLsFailed, $db, $cars);
+		$endTime = time();
 		
 		$numCarsUpdated   = $result->numCarsUpdated;
 		$numCarsAdded     = $result->numCarsAdded;
@@ -438,6 +501,7 @@ if ($numDetailURLsFailed > 0)
 		$numCars = count($cars) - $numCars;
 		$numDetailURLsTried = $numCars + $numDetailURLsFailed;
 		
+		c_log('Took ' . formatDuration($endTime - $startTime));
 		c_log($numDetailURLsTried . ' detail URLs tried');
 		c_log($numDetailURLsFailed . ' detail URLs failed');
 		c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
@@ -455,13 +519,17 @@ if (!$skipImages)
 	c_log('*********************************************');
 	c_log('');
 	
+	$startTime = time();
 	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
+	$endTime = time();
+
 	$numImageDownloadsFailed = count($result->downloadFailedForCars);
 	
 	c_log('');
 	c_log('*********************************************');
 	c_log('');
 	
+	c_log('Took ' . formatDuration($endTime - $startTime));
 	c_log($result->numCarsUpdating . ' cars updated');
 	c_log((count($cars) - $result->numCarsUpdating) . ' cars skipped');
 	c_log($result->numImagesDownloaded     . ' images downloaded');
@@ -472,7 +540,7 @@ if (!$skipImages)
 	if ($numImageDownloadsFailed > 0)
 	{
 		c_log('');
-
+		
 		$numImageDownloadsTried = $numImageDownloadsFailed + $result->numImagesDownloaded;
 		
 		if ($numImageDownloadsFailed > $numImageDownloadsTried * 0.25 && $numImageDownloadsFailed > 20)
@@ -485,7 +553,11 @@ if (!$skipImages)
 			c_log('');
 	
 			sleep(10);
+			
+			$startTime = time();
 			$result = updateCarImages($result->downloadFailedForCars, $updateExistingImages, $redownloadBaseImages);
+			$endTime = time();
+			
 			$numImageDownloadsFailedOld = $numImageDownloadsFailed;
 			$numImageDownloadsFailed = count($result->downloadFailedForCars);
 			
@@ -493,6 +565,7 @@ if (!$skipImages)
 			c_log('*********************************************');
 			c_log('');
 			
+			c_log('Took ' . formatDuration($endTime - $startTime));
 			c_log($result->numCarsUpdating . ' cars updated');
 			c_log(($numImageDownloadsFailedOld - $result->numCarsUpdating) . ' cars skipped');
 			c_log($result->numImagesDownloaded     . ' images downloaded');
