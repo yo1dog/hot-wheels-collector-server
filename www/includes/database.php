@@ -1,7 +1,7 @@
 <?php
 class DB
 {
-	private $mysqli;
+	public $mysqli;
 	
 	public function __construct()
 	{
@@ -400,9 +400,6 @@ class DB
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
-		
-		if ($this->mysqli->affected_rows === 0)
-			throw new Exception("Error setting image name: No cars affected with ID \"$carID\".");
 	}
 	
 	
