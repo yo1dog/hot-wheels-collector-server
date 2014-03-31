@@ -416,7 +416,7 @@ class DB
 		$distinguishingNotes = $distinguishingNotes === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($distinguishingNotes) . '"';
 		$barcodeData         = $barcodeData         === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($barcodeData)         . '"';
 		
-		$query = "INSERT INTO cars (name, segment, series, make, color, style, sort_name, custom_toy_number, distinguishing_notes, barcode_data) VALUES (\"$name\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", \"$sortName\", $customToyNumber, $distinguishingNotes, $barcodeData)";
+		$query = "INSERT INTO cars (name, segment, series, make, color, style, sort_name, is_custom, custom_toy_number, distinguishing_notes, barcode_data) VALUES (\"$name\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", \"$sortName\", 1, $customToyNumber, $distinguishingNotes, $barcodeData)";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
