@@ -95,9 +95,9 @@ try
 					break;
 			}
 			
-			$baseFilename   = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-			$iconFilename   = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-			$detailFilename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+			$baseFilename   = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_CUSTOM_EXT;
+			$iconFilename   = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_CUSTOM_EXT;
+			$detailFilename = HOTWHEELS2_IMAGE_PATH . $imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_CUSTOM_EXT;
 			
 			if (move_uploaded_file($_FILES['carPicture']['tmp_name'], $baseFilename) !== true)
 				throw new Exception('Error moving uploaded file from "' . $_FILES['carPicture']['tmp_name'] . '" to "' . $baseFilename . '"');

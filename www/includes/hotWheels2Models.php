@@ -38,8 +38,8 @@ class HW2Car
 		$this->distinguishingNotes = $assoc['distinguishing_notes'];
 		$this->barcodeData         = $assoc['barcode_data'];
 		
-		$this->imageURL       = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $assoc['image_name'] . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-		$this->detailImageURL = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $assoc['image_name'] . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		$this->imageURL       = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $assoc['image_name'] . HOTWHEELS2_IMAGE_ICON_SUFFIX   . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
+		$this->detailImageURL = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $assoc['image_name'] . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
 		
 		$this->owned = isset($assoc['owned'])? $assoc['owned'] === '1' : false;
 	}

@@ -6,6 +6,7 @@ define('DB_NAME',     '');
 
 define('HOTWHEELS2_IMAGE_PATH',                 '');
 define('HOTWHEELS2_IMAGE_EXT',                  '.png');
+define('HOTWHEELS2_IMAGE_CUSTOM_EXT',           '.jpeg');
 define('HOTWHEELS2_IMAGE_BASE_SUFFIX',          '_base');
 define('HOTWHEELS2_IMAGE_ICON_SUFFIX',          '_icon');
 define('HOTWHEELS2_IMAGE_DETAIL_SUFFIX',        '_detail');
