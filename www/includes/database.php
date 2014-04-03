@@ -293,7 +293,7 @@ class DB
 	// 0 - nothing
 	// 1 - car updated
 	// 2 - car inserted
-	public function insertOrUpdateCar($car, &$newCarID)
+	public function insertOrUpdateCar($car, &$added, &$updated, &$changedFields)
 	{
 		$vehicleID         = $this->mysqli->real_escape_string($car->vehicleID);
 		$name              = $this->mysqli->real_escape_string($car->name);
@@ -307,7 +307,7 @@ class DB
 		$sortName          = $this->mysqli->real_escape_string($car->sortName);
 		
 		// check if the vehicle ID exists
-		$query = "SELECT id FROM cars WHERE vehicle_id = \"$vehicleID\"";
+		$query = "SELECT * FROM cars WHERE vehicle_id = \"$vehicleID\"";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -317,14 +317,14 @@ class DB
 		if ($result === false)
 			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		
-		$row = $result->fetch_row();
-		$carID = $row === NULL ? NULL : $row[0];
+		$row = $result->fetch_assoc();
+		$existingCar = $row === NULL ? NULL : $row;
 		
-		if ($carID === NULL)
+		if ($existingCar === NULL)
 		{
 			// check if the vehicle ID has changed
 			// see if there is a car with the same name, toy number, segment, and make
-			$query = "SELECT id FROM cars WHERE name = \"$name\" AND toy_number = \"$toyNumber\" AND segment=\"$segment\" AND make=\"$make\"";
+			$query = "SELECT * FROM cars WHERE name = \"$name\" AND toy_number = \"$toyNumber\" AND segment=\"$segment\" AND make=\"$make\"";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
@@ -336,21 +336,32 @@ class DB
 			
 			$row = $result->fetch_row();
 			
-			// if there is, use its ID
+			// if there is, use it
 			if ($row !== NULL)
-				$carID = $row[0];
+				$existingCar = $row;
 		}
 		
-		if ($carID !== NULL)
+		if ($existingCar !== NULL)
 		{
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_query($carID) . "\"";
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_query($existingCar['id']) . "\"";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
 				throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 			
-			$newCarID = $carID;
-			return $this->mysqli->affected_rows > 0? 1 : 0;
+			$added = false;
+			$updated = $this->mysqli->affected_rows > 0;
+			$updatedFields = array();
+			
+			$existingCar = new HW2Car($existingCar);
+			
+			foreach ($car as $key => $value)
+			{
+				if ($value !== $existingCar->$key)
+					$updatedFields[$key] = array('from' => $existingCar->$key, 'to' => $value);
+			}
+			
+			return $car['id'];
 		}
 		else
 		{
@@ -363,9 +374,13 @@ class DB
 			$newCarID = $this->mysqli->insert_id;
 			
 			if ($newCarID === 0)
-				throw new Exception('Unable to get last inserted id. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->errors);
+				throw new Exception('Unable to get last inserted ID. MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->errors);
 			
-			return 2;
+			$added = true;
+			$updated = false;
+			$updatedFields = NULL;
+			
+			return $newCarID;
 		}
 	}
 	

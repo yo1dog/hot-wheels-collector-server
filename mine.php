@@ -1,43 +1,82 @@
 <?php
-/*
-php mine.php searchTerm(optinal) flags
+$usage = <<<EOT
+php mine.php <flags>
 
-searchTerm - (Optional) will use the given term to search the Hot Wheels site instead of " " which returns all cars
+-g -regenerateImages     : Re-generate and replace the icon and detail images from the
+                           base images even if they already exist.
+                           Without this flag we only generate icon and detail images if
+                           they do not exist.
 
-flags:
-skipImages           - will not download or update any images
-updateExistingImages - will re-generate all icon and detail images even if they already exist.
-redownloadBaseImages - will download the base images used to generate the icon and detail images even if it already exists
+-h -help                 : Display this usage help text.
 
-php mine.php corvette updateExistingImages
-*/
+-k -skipImages           : Skip images completely. Do not check for needed images,
+                           download base images, nor generate icon and detail images.
+                           Without this flag we download base images and generate icon
+                           and detail images as needed.
+
+-l -log <filename>       : Use the given filename to log PHP errors to.
+                           Without this flag, MINE_LOG_FILE fom config.php is used.
+
+-r -redownloadBaseImages : Download and replace base images, even if they already exist.
+                           Base images are used to generate the icon and detail images.
+                           Without this flag we only download base images if they do not
+                           exist.
+
+-s -search <search term> : Uses the given search term to search the Hot Wheels site to
+                           limit the responses.
+                           Without this flag a single space " " is used which returns
+                           every car on the Hot Wheels site.
+
+-v -verbose              : If you don't know what a verbsose flag is... oh my.
+
+EOT;
 
 require 'config.php';
 require 'www/includes/globals.php';
 require 'www/includes/hotWheelsAPI.php';
 require 'www/includes/database.php';
 
-ini_set("error_log", MINE_LOG_FILE);
 
-function c_log($str)
+/*****************************************************************************************************
+ *****************************************************************************************************
+ * Helper Functions
+ * 
+ *****************************************************************************************************
+ *****************************************************************************************************/
+
+$verbose = false;
+
+// handles printing verbose and non-verbose output
+function c_print($str, $isVerbose = false)
 {
-	error_log($str);
+	global $verbose;
+	if ($isVerbose && !$verbose)
+		return;
+	
 	echo $str, "\n";
 }
 
-function logExternalFailure($result)
+// handles printing an external execution's failure
+function printExternalFailure($result)
 {
-	c_log('ERROR: ' . $result['logName'] . ' returned non-zero status (' . $result['status'] . ') or had output');
-	c_log('----------');
-	c_log($result['cmd']);
+	c_print("ERROR: external program returned non-zero status ({$result['status']}) or had output:");
+	c_print('----------');
+	c_print($result['cmd']);
 	
 	foreach ($result['output'] as $line)
-		c_log($line);
+		c_print($line);
 	
-	c_log('----------');
+	c_print('----------');
 }
 
-function clean($str)
+// transforms a car into an identifiable string
+function carToString($car)
+{
+	return (isset($car->id) ? "\"{$car->id}\" - " : '') . "\"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"";
+}
+
+// cleans a field returned from the Hot Wheels website
+function cleanField($str)
 {
 	if (strlen($str) === 0)
 		return $str;
@@ -48,6 +87,7 @@ function clean($str)
 		str_replace('®', '', $str)));
 }
 
+// formats a duration of seconds into a human-readable string
 function formatDuration($seconds)
 {
 	$mins  = floor($seconds / 60);
@@ -91,6 +131,22 @@ function formatDuration($seconds)
 	return $str;
 }
 
+
+
+
+/*****************************************************************************************************
+ *****************************************************************************************************
+ * Main Functions
+ *
+ *****************************************************************************************************
+ *****************************************************************************************************/
+
+/*****************************************************************************************************
+ * Get Cars
+ * 
+ * Takes a list of detail URLs and uses the HotWheels2API to parse a car out of each detail page.
+ * Also returns a list of detail URLs that fail.
+ */
 function getCars($detailURLs, $db, &$cars)
 {
 	$numCarsUpdated = 0;
@@ -99,6 +155,7 @@ function getCars($detailURLs, $db, &$cars)
 	
 	$detailURLNum = 0;
 	$first = true;
+	$nonVerboseOutputLastIteration = false;
 	foreach ($detailURLs as $detailURL)
 	{
 		++$detailURLNum;
@@ -106,70 +163,116 @@ function getCars($detailURLs, $db, &$cars)
 		if ($first)
 			$first = false;
 		else
-			echo "\n";
+			c_print('', !$nonVerboseOutputLastIteration);
 		
-		echo "Trying detail URL ($detailURLNum): $detailURL\n";
+		$nonVerboseOutputLastIteration = false;
+		
+		
+		c_print("Trying detail URL ($detailURLNum): \"$detailURL\"", true);
 		
 		if (strlen($detailURL) === 0)
 		{
-			c_log('empty detail URL');
+			c_print("WARNING: Detail URL is empty, skipping: \"$detailURL\"");
+			$nonVerboseOutputLastIteration = true;
 			continue;
 		}
+		
+		
 		
 		// get car from details URL
-		$car = HotWheelsAPI::getCar($detailURL);
+		$result = HotWheelsAPI::getCar($detailURL);
 		
-		if (is_string($car))
+		if (is_string($result))
 		{
-			c_log('getCar failed for "' . $detailURL . '": ' . $car);
+			c_print("ERROR: HotWheels2API returned an error for detail URL: \"$detailURL\"");
+			c_print($result);
 			
 			$detailURLsFailed[] = $detailURL;
+			$nonVerboseOutputLastIteration = true;
 			continue;
 		}
 		
-		// clean the fields
+		$car = $result;
+		
+		
+		
+		// cleanField the fields
 		$car->vehicleID = strtolower($car->vehicleID);
-		$car->name      = clean($car->name);
-		$car->toyNumber = strtoupper(clean($car->toyNumber));
-		$car->segment   = clean($car->segment);
-		$car->series    = clean($car->series);
-		$car->make      = clean($car->make);
-		$car->color     = clean($car->color);
-		$car->style     = clean($car->style);
+		$car->name      = cleanField($car->name);
+		$car->toyNumber = strtoupper(cleanField($car->toyNumber));
+		$car->segment   = cleanField($car->segment);
+		$car->series    = cleanField($car->series);
+		$car->make      = cleanField($car->make);
+		$car->color     = cleanField($car->color);
+		$car->style     = cleanField($car->style);
 		
 		// add sortname
 		$car->sortName  = createCarSortName($car->name);
 		
-		echo "Found car \"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"\n";
+		c_print('Found car: ' . carToString($car), true);
+		
+		
 		
 		// insert or update db
+		$car->id = NULL;
 		try
 		{
-			$carID;
-			$result = $db->insertOrUpdateCar($car, $carID);
+			$added = false;
+			$updated = false;
+			$updatedFields = NULL;
+			
+			$car->id = $db->insertOrUpdateCar($car, $added, $updated, $updatedFields);
 			
 			$cars[] = $car;
 			
-			if ($result === 2)
+			if ($added)
 			{
-				$car->imageName = createCarImageName($carID, $car->name);
-				$db->setCarImageName($carID, $car->imageName);
+				$car->imageName = createCarImageName($car->id, $car->name);
+				$db->setCarImageName($car->id, $car->imageName);
 				
+				c_print('New car added: ' . carToString($car));
 				++$numCarsAdded;
 			}
 			else
 			{
-				$car->imageName = $db->getCarImageName($carID);
+				$car->imageName = $db->getCarImageName($car->id);
 				
-				if ($result === 1)
+				if ($updated)
+				{
+					c_print('Car updated: ' . carToString($car));
+					c_print('Fields updated:');
+					
+					foreach ($updatedFields as $fieldName => $update)
+					{
+						c_print($fieldName);
+						c_print('from ' . $update['from']);
+						c_print('to   ' . $update['to']);
+					}
+					
 					++$numCarsUpdated;
+				}
 			}
 		}
 		catch (Exception $e)
 		{
-			c_log('insertOrUpdateCar failed for "' . $car->vehicleID . '": ' . $e->getMessage());
+			c_print('ERROR: Database returned an error during insertOrUpdateCar or setCarImageName: ' . carToString($car));
+			c_print($e->getMessage());
 			
 			$detailURLsFailed[] = $detailURL;
+			$nonVerboseOutputLastIteration = true;
+			
+			if ($car->id !== NULL)
+			{
+				try
+				{
+					$db->removeCar($car->id);
+				}
+				catch (Exception $e)
+				{
+					c_print("ERROR: Database returned an error while trying to remove car with ID \"{$car->id}\" after a previous database error: " . carToString($car));
+					c_print($e->getMessage());
+				}
+			}
 			continue;
 		}
 	}
@@ -185,6 +288,12 @@ function getCars($detailURLs, $db, &$cars)
 
 
 
+/*****************************************************************************************************
+ * Download Image
+ *
+ * Downlaods a single image.
+ */
+
 function downloadImage($filename, $url)
 {
 	$fp = NULL;
@@ -195,7 +304,7 @@ function downloadImage($filename, $url)
 		$fp = fopen($filename, 'wb');
 		
 		if ($fp === false)
-			throw new Exception('"' . $filename . '" unable to open file');
+			throw new Exception('Unable to open file.');
 		
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL,    $url);
@@ -208,11 +317,11 @@ function downloadImage($filename, $url)
 		
 		$cURLErrorNum = curl_errno($ch);
 		if ($cURLErrorNum !== 0)
-			throw new Exception('cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
+			throw new Exception("cURL Error ($cURLErrorNum): " . curl_error($ch));
 		
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
-			throw new Exception('Request Error: Status code ' . $statusCode);
+			throw new Exception("Non-200 resposne status code: $statusCode");
 		
 		curl_close($ch);
 		$ch = NULL;
@@ -228,129 +337,163 @@ function downloadImage($filename, $url)
 	}
 }
 
-function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
+
+
+
+/*****************************************************************************************************
+ * Generate Car Image Type
+ *
+ * Generates an image with the given width from a processed base image.
+ */
+
+function generateCarImageType($baseProcessedFilename, $newFilename, $width, $type, $car)
 {
-	$downloadFailedForCars = array();
+	if (file_exists($iconFilename))
+	{
+		if (!unlink($iconFilename))
+			c_print("WARNING: Unable to delete existing $type image file before image generation: \"$newFilename\"");
+	}
 	
-	$numCarsUpdating = 0;
-	$numImagesDownloaded = 0;
-	$numUpdatedImages = 0;
-	$numUpdateImagesFailed = 0;
+	$result = generateCarImage($baseProcessedFilename, $newFilename, $width);
+	
+	if ($result === true)
+		return true;
+	
+	c_print("ERROR: Failed to generate $type image for car: " . carToString($car));
+	printExternalFailure($result);
+		
+	if (file_exists($newFilename))
+	{
+		if (!unlink($newFilename))
+			c_print("WARNING: Unable to delete $type image file after failed image generation: \"$newFilename\"");
+	}
+	
+	return false;
+}
+
+
+
+
+/*****************************************************************************************************
+ * Get Car Images
+ *
+ * Takes an array of cars and downloads base images and generates icon and detail images.
+ */
+
+function getCarImages($cars, $regenerateImages, $redownloadBaseImages)
+{
+	$baseImageDownloadFailedForCars = array();
+	
+	$numCarsGeneratedImagesFor = 0;
+	$numBaseImagesDownloaded = 0;
+	$numBaseImagesProcessed = 0;
+	$numBaseImageProcessingsFailed = 0;
+	$numImagesGenerated = 0;
+	$numImageGenerationsFailed = 0;
 	
 	$first = true;
+	$nonVerboseOutputLastIteration = false;
+	
 	foreach ($cars as $car)
 	{
 		if ($first)
 			$first = false;
 		else
-			echo "\n";
-			
-		$baseFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-		$iconFilename   = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX   . HOTWHEELS2_IMAGE_EXT;
-		$detailFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+			c_print('', !$nonVerboseOutputLastIteration);
 		
-		// check if they exist already
-		if ($updateExistingImages || !file_exists($iconFilename) || !file_exists($detailFilename))
+		$nonVerboseOutputLastIteration = false;
+		
+		$baseFilename          = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX           . HOTWHEELS2_IMAGE_EXT;
+		$baseProcessedFilename = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_BASE_PROCESSED_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		$iconFilename          = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX           . HOTWHEELS2_IMAGE_EXT;
+		$detailFilename        = HOTWHEELS2_IMAGE_PATH . $car->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX         . HOTWHEELS2_IMAGE_EXT;
+		
+		
+		
+		// downlaod base image
+		if ($redownloadBaseImages || !file_exists($baseFilename))
 		{
-			++$numCarsUpdating;
-			echo  "Updating images for \"{$car->vehicleID}\" - \"{$car->toyNumber}\" - \"{$car->name}\"\n";
+			$url = $car->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
 			
-			// check if base image already exists
-			if ($redownloadBaseImages || !file_exists($baseFilename))
+			c_print("Downloading base image \"$url\" for car: " . carToString($car));
+			
+			if (file_exists($baseFilename))
 			{
-				$url = $car->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
-				
-				c_log('Downloading base image: ' . $url);
+				if (!unlink($baseFilename))
+					c_print("WARNING: Unable to delete existing base image file before re-download: \"$baseFilename\"");
+			}
+			
+			try
+			{
+				downloadImage($baseFilename, $url);
+			}
+			catch (Exception $e)
+			{
+				c_print("ERROR: download image failed for URL: \"$url\"");
+				c_print($e->getMessage);
 				
 				if (file_exists($baseFilename))
 				{
 					if (!unlink($baseFilename))
-						c_log('WARNING: unable to delete existing base image file "' . $baseFilename . '" before re-download!');
+						c_print("WARNING: unable to delete base image file after failed download: \"$baseFilename\"");
 				}
 				
-				try
-				{
-					downloadImage($baseFilename, $url);
-				}
-				catch (Exception $e)
-				{
-					c_log('ERROR: download image failed for URL "' . $url . '": ' . $e->getMessage());
-					
-					if (file_exists($baseFilename))
-					{
-						if (!unlink($baseFilename))
-							c_log('WARNING: unable to delete base image file "' . $baseFilename . '" after failed download!');
-					}
-					
-					$downloadFailedForCars[] = $car;
-					continue;
-				}
-				
-				++$numImagesDownloaded;
-				
-				// trim background with hwip
-				$result = proccessCarBaseImage($baseFilename);
-				if ($result !== true)
-				{
-					logExternalFailure($result);
-		
-					++$numUpdateImagesFailed;
-					
-					if (!unlink($baseFilename))
-						c_log('WARNING: unable to delete base image file "' . $baseFilename . '" after failed hwip!');
-					
-					continue;
-				}
-				
-				++$numUpdatedImages;
+				$baseImageDownloadFailedForCars[] = $car;
+				continue;
 			}
 			
-			// generate images
-			if (file_exists($iconFilename))
-			{
-				if (!unlink($iconFilename))
-					c_log('WARNING: unable to delete existing icon image file "' . $iconFilename . '" before update!');
-			}
-			
-			$result = generateCarImage($baseFilename, $iconFilename, MINE_CAR_IMAGE_ICON_WIDTH);
-			if ($result !== true)
-			{
-				logExternalFailure($result);
-				
-				++$numUpdateImagesFailed;
-				
-				if (file_exists($iconFilename))
-				{
-					if (!unlink($iconFilename))
-						c_log('WARNING: unable to delete icon image file "' . $iconFilename . '" after failed convert!');
-				}
-			}
-			else
-				++$numUpdatedImages;
-			
-			
-			if (file_exists($detailFilename))
-			{
-				if (!unlink($detailFilename))
-					c_log('WARNING: unable to delete existing detail image file "' . $detailFilename . '" before update!');
-			}
-			
-			$result = generateCarImage($baseFilename, $detailFilename, MINE_CAR_IMAGE_DETAIL_WIDTH);
-			if ($result !== true)
-			{
-				logExternalFailure($result);
-				
-				++$numUpdateImagesFailed;
-				
-				if (file_exists($detailFilename))
-				{
-					if (!unlink($detailFilename))
-						c_log('WARNING: unable to delete detail image file "' . $detailFilename . '" after failed convert!');
-				}
-			}
-			else
-				++$numUpdatedImages;
+			++$numBaseImagesDownloaded;
 		}
+		
+		
+		
+		// don't process if we are not regenerating images and both images already exist
+		if (!$regenerateImages && file_exists($iconFilename) && file_exists($detailFilename))
+			continue;
+		
+		++$numCarsGeneratedImagesFor;
+		c_print('Generating images for car: ' . carToString($car), true);
+		
+		
+		// process base image with HWIP
+		if (file_exists($baseProcessedFilename))
+		{
+			if (!unlink($baseProcessedFilename))
+				c_print("WARNING: unable to delete existing base processed image file before processing: \"$baseProcessedFilename\"");
+		}
+		
+		$result = proccessCarBaseImage($baseFilename, $baseProcessedFilename);
+		
+		if ($result !== true)
+		{
+			c_print("ERROR: Failed to proccess base image for car: " . carToString($car));
+			printExternalFailure($result);
+		
+			++$numBaseImageProcessingsFailed;
+			
+			if (file_exists($baseProcessedFilename))
+			{
+				if (!unlink($baseProcessedFilename))
+					c_print("WARNING: unable to delete base processed image file after failed processing: \"$baseProcessedFilename\"");
+			}
+		
+			continue;
+		}
+		
+		++$numBaseImagesProcessed;
+		
+		
+		
+		// generate images
+		if (generateCarImageType($baseProcessedFilename, $iconFilename  , MINE_CAR_IMAGE_ICON_WIDTH  , 'icon'))
+			++$numImagesGenerated;
+		else
+			++$numImageGenerationsFailed;
+		
+		if (generateCarImageType($baseProcessedFilename, $detailFilename, MINE_CAR_IMAGE_DETAIL_WIDTH, 'detail'))
+			++$numImagesGenerated;
+		else
+			++$numImageGenerationsFailed;
 	}
 	
 	$result = new stdClass();
@@ -363,56 +506,108 @@ function updateCarImages($cars, $updateExistingImages, $redownloadBaseImages)
 	return $result;
 }
 
+
+
+
+
+
+/*****************************************************************************************************
+ *****************************************************************************************************
+ * Main
+ *
+ *****************************************************************************************************
+ *****************************************************************************************************/
+
 $skipImages = false;
-$updateExistingImages = false;
+$regenerateImages = false;
 $redownloadBaseImages = false;
 $searchTerm = ' ';
+$logFilename = MINE_LOG_FILE;
 
-foreach ($argv as $arg)
+for ($i = 0; $i < count($argv); ++$i)
 {
-	if ($arg === 'skipImages')
-		$skipImages = true;
-	
-	else if ($arg === 'updateExistingImages')
-		$updateExistingImages = true;
-	
-	else if ($arg === 'redownloadBaseImages')
-		$redownloadBaseImages = true;
+	switch ($argv[$i])
+	{
+		case '-h':
+		case '-help':
+			die($usageHelp);
+		
+		case '-v':
+		case '-verbose':
+			$verbose = true;
+			break;
+		
+		case '-k':
+		case '-skipImages':
+			$skipImages = true;
+			break;
+		
+		case '-g':
+		case '-regenerateImages':
+			$regenerateImages = true;
+			break;
+		
+		case '-r':
+		case '-redownloadBaseImages':
+			$redownloadBaseImages = true;
+			break;
+		
+		case '-s':
+		case '-search':
+			++$i;
+			
+			if ($i > count($argv))
+				die("ERROR: -serach flag used without a search term following it.\nUse -help flag for usage help.");
+			
+			$searchTerm = $argv[$i];
+			
+			if (strlen($searchTerm) === 0 || $searchTerm[0] === '-')
+				die("ERROR: -serach flag used without a search term following it.\nUse -help flag for usage help.");
+			
+			break;
+		
+		case '-l':
+		case '-log':
+			++$i;
+			
+			if ($i > count($argv))
+				die("ERROR: -log flag used without a filename following it.\nUse -help flag for usage help.");
+			
+			$logFilename = $argv[$i];
+			
+			if (strlen($logFilename) === 0 || $logFilename[0] === '-')
+				die("ERROR: -log flag used without a filename following it.\nUse -help flag for usage help.");
+			
+			break;
+	}
 }
 
-if ($skipImages && $updateExistingImages)
-{
-	c_log('ERROR: Cannot use skipImages and updateExistingImages flags together. Does not make sense.');
-	die();
-}
+if ($skipImages && $regenerateImages)
+	die("ERROR: Cannot use -skipImages and -regenerateImages flags together. This does not make sense.\nUse -help flag for usage help.");
 
 if ($skipImages && $redownloadBaseImages)
-{
-	c_log('ERROR: Cannot use skipImages and redownloadBaseImages flags together. Does not make sense.');
-	die();
-}
+	die("ERROR: Cannot use -skipImages and -redownloadBaseImages flags together. This does not make sense.\nUse -help flag for usage help.");
 
-if (isset($argv[1]) && $argv[1] !== 'skipImages' && $argv[1] !== 'updateExistingImages' && $argv[1] !== 'redownloadBaseImages')
-	$searchTerm = $argv[1];
+ini_set("error_log", $logFilename);
 
-c_log('******************************************************************************************');
-c_log('******************************************************************************************');
-c_log('* Mining Start');
-c_log('******************************************************************************************');
-c_log('******************************************************************************************');
-c_log('');
+c_print('******************************************************************************************');
+c_print('******************************************************************************************', true);
+c_print('* Mining Start');
+c_print('******************************************************************************************');
+c_print('******************************************************************************************', true);
+c_print('', true);
 
 if ($skipImages)
-  c_log('* Skipping images');
+  c_print('* Skipping images');
 
-if ($updateExistingImages)
-  c_log('* Updating existing images');
+if ($regenerateImages)
+  c_print('* Regenerating icon and detail images');
 
 if ($redownloadBaseImages)
-  c_log('* Re-downloading base images');
+  c_print('* Re-downloading base images');
 
-c_log('');
-c_log('Searching' . ($searchTerm === ' ' ? '' : ' "' . $searchTerm . '"') . '...');
+c_print('');
+c_print('Searching' . ($searchTerm === ' ' ? '' : ' "' . $searchTerm . '"') . '...');
 
 $startTime = time();
 $detailURLs = HotWheelsAPI::search($searchTerm, 300);
@@ -420,21 +615,21 @@ $endTime = time();
 
 if (is_string($detailURLs))
 {
-	c_log('ERROR: Search failed: ' . $detailURLs);
+	c_print('ERROR: Search failed: ' . $detailURLs);
 	die();
 }
 
 $numDetailURLs = count($detailURLs);
-c_log('Done. Found ' . $numDetailURLs . ' detail URLs');
-c_log('Took ' . formatDuration($endTime - $startTime));
+c_print('Done. Found ' . $numDetailURLs . ' detail URLs');
+c_print('Took ' . formatDuration($endTime - $startTime));
 
 $db = new DB();
 
-c_log('');
-c_log('*********************************************');
-c_log('* Mining Car Details');
-c_log('*********************************************');
-c_log('');
+c_print('');
+c_print('*********************************************', true);
+c_print('* Mining Car Details');
+c_print('*********************************************', true);
+c_print('', true);
 
 $cars = array();
 
@@ -446,41 +641,41 @@ $numCarsUpdated   = $result->numCarsUpdated;
 $numCarsAdded     = $result->numCarsAdded;
 $detailURLsFailed = $result->detailURLsFailed;
 
-c_log('');
-c_log('*********************************************');
-c_log('');
+c_print('');
+c_print('*********************************************', true);
+c_print('', true);
 
 $numDetailURLsFailed = count($detailURLsFailed);
 $numCars = count($cars);
 $numDetailURLsTried = $numCars + $numDetailURLsFailed;
 
-c_log('Took ' . formatDuration($endTime - $startTime));
-c_log($numDetailURLsTried . ' detail URLs tried');
-c_log($numDetailURLsFailed . ' detail URLs failed');
-c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
-c_log($numCars . ' cars found');
-c_log($numCarsUpdated . ' cars updated');
-c_log($numCarsAdded . ' cars added');
+c_print('Took ' . formatDuration($endTime - $startTime));
+c_print($numDetailURLsTried . ' detail URLs tried');
+c_print($numDetailURLsFailed . ' detail URLs failed');
+c_print(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
+c_print($numCars . ' cars found');
+c_print($numCarsUpdated . ' cars updated');
+c_print($numCarsAdded . ' cars added');
 
 if ($numDetailURLsTried === 0)
 {
-	c_log('');
-	c_log('ERROR: No detail URLs were tried. Search may have returned no results or all detail URLs returned may have been empty.');
+	c_print('');
+	c_print('ERROR: No detail URLs were tried. Search may have returned no results or all detail URLs returned may have been empty.');
 	die();
 }
 
 if ($numDetailURLsFailed > 0)
 {
-	c_log('');
+	c_print('');
 	
 	if ($numDetailURLsFailed > $numDetailURLsTried * 0.25 && $numDetailURLsFailed > 20)
-		c_log($numDetailURLsFailed . ' detail URLs failed. This is more than 1/4th of the total detail URLs tried (' . $numDetailURLsTried . ') and more than 20 and will not rety.');
+		c_print($numDetailURLsFailed . ' detail URLs failed. This is more than 1/4th of the total detail URLs tried (' . $numDetailURLsTried . ') and more than 20 and will not rety.');
 	else
 	{
-		c_log($numDetailURLsFailed . ' detail URLs failed. Retrying those in 10 seconds...');
-		c_log('');
-		c_log('*********************************************');
-		c_log('');
+		c_print($numDetailURLsFailed . ' detail URLs failed. Retrying those in 10 seconds...');
+		c_print('');
+		c_print('*********************************************', true);
+		c_print('', true);
 		
 		sleep(10);
 		
@@ -492,94 +687,94 @@ if ($numDetailURLsFailed > 0)
 		$numCarsAdded     = $result->numCarsAdded;
 		$detailURLsFailed = $result->detailURLsFailed;
 		
-		c_log('');
-		c_log('*********************************************');
-		c_log('');
+		c_print('');
+		c_print('*********************************************', true);
+		c_print('', true);
 		
 		$numDetailURLs = $numDetailURLsFailed;
 		$numDetailURLsFailed = count($detailURLsFailed);
 		$numCars = count($cars) - $numCars;
 		$numDetailURLsTried = $numCars + $numDetailURLsFailed;
 		
-		c_log('Took ' . formatDuration($endTime - $startTime));
-		c_log($numDetailURLsTried . ' detail URLs tried');
-		c_log($numDetailURLsFailed . ' detail URLs failed');
-		c_log(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
-		c_log($numCars . ' cars found');
-		c_log($numCarsUpdated . ' cars updated');
-		c_log($numCarsAdded . ' cars added');
+		c_print('Took ' . formatDuration($endTime - $startTime));
+		c_print($numDetailURLsTried . ' detail URLs tried');
+		c_print($numDetailURLsFailed . ' detail URLs failed');
+		c_print(($numDetailURLs - $numDetailURLsTried) . ' detail URLs skipped');
+		c_print($numCars . ' cars found');
+		c_print($numCarsUpdated . ' cars updated');
+		c_print($numCarsAdded . ' cars added');
 	}
 }
 
 if (!$skipImages)
 {
-	c_log('');
-	c_log('*********************************************');
-	c_log('* Mining Images');
-	c_log('*********************************************');
-	c_log('');
+	c_print('');
+	c_print('*********************************************', true);
+	c_print('* Mining Images');
+	c_print('*********************************************', true);
+	c_print('', true);
 	
 	$startTime = time();
-	$result = updateCarImages($cars, $updateExistingImages, $redownloadBaseImages);
+	$result = getCarImages($cars, $regenerateImages, $redownloadBaseImages);
 	$endTime = time();
 
 	$numImageDownloadsFailed = count($result->downloadFailedForCars);
 	
-	c_log('');
-	c_log('*********************************************');
-	c_log('');
+	c_print('');
+	c_print('*********************************************', true);
+	c_print('', true);
 	
-	c_log('Took ' . formatDuration($endTime - $startTime));
-	c_log($result->numCarsUpdating . ' cars updated');
-	c_log((count($cars) - $result->numCarsUpdating) . ' cars skipped');
-	c_log($result->numImagesDownloaded     . ' images downloaded');
-	c_log($numImageDownloadsFailed . ' image downloads failed');
-	c_log($result->numUpdatedImages        . ' images updated');
-	c_log($result->numUpdateImagesFailed   . ' image updates failed');
+	c_print('Took ' . formatDuration($endTime - $startTime));
+	c_print($result->numCarsUpdating . ' cars updated');
+	c_print((count($cars) - $result->numCarsUpdating) . ' cars skipped');
+	c_print($result->numImagesDownloaded     . ' images downloaded');
+	c_print($numImageDownloadsFailed . ' image downloads failed');
+	c_print($result->numUpdatedImages        . ' images updated');
+	c_print($result->numUpdateImagesFailed   . ' image updates failed');
 	
 	if ($numImageDownloadsFailed > 0)
 	{
-		c_log('');
+		c_print('');
 		
 		$numImageDownloadsTried = $numImageDownloadsFailed + $result->numImagesDownloaded;
 		
 		if ($numImageDownloadsFailed > $numImageDownloadsTried * 0.25 && $numImageDownloadsFailed > 20)
-			c_log($numImageDownloadsFailed . ' image downloads failed. This is more than 1/4th of the total image downloads tried (' . $numImageDownloadsTried . ') and more than 20 and will not rety.');
+			c_print($numImageDownloadsFailed . ' image downloads failed. This is more than 1/4th of the total image downloads tried (' . $numImageDownloadsTried . ') and more than 20 and will not rety.');
 		else
 		{
-			c_log($numImageDownloadsFailed . ' image downloads failed. Retrying those in 10 seconds...');
-			c_log('');
-			c_log('*********************************************');
-			c_log('');
+			c_print($numImageDownloadsFailed . ' image downloads failed. Retrying those in 10 seconds...');
+			c_print('');
+			c_print('*********************************************', true);
+			c_print('', true);
 	
 			sleep(10);
 			
 			$startTime = time();
-			$result = updateCarImages($result->downloadFailedForCars, $updateExistingImages, $redownloadBaseImages);
+			$result = getCarImages($result->downloadFailedForCars, $regenerateImages, $redownloadBaseImages);
 			$endTime = time();
 			
 			$numImageDownloadsFailedOld = $numImageDownloadsFailed;
 			$numImageDownloadsFailed = count($result->downloadFailedForCars);
 			
-			c_log('');
-			c_log('*********************************************');
-			c_log('');
+			c_print('');
+			c_print('*********************************************', true);
+			c_print('', true);
 			
-			c_log('Took ' . formatDuration($endTime - $startTime));
-			c_log($result->numCarsUpdating . ' cars updated');
-			c_log(($numImageDownloadsFailedOld - $result->numCarsUpdating) . ' cars skipped');
-			c_log($result->numImagesDownloaded     . ' images downloaded');
-			c_log($numImageDownloadsFailed . ' image downloads failed');
-			c_log($result->numUpdatedImages        . ' images updated');
-			c_log($result->numUpdateImagesFailed   . ' image updates failed');
+			c_print('Took ' . formatDuration($endTime - $startTime));
+			c_print($result->numCarsUpdating . ' cars updated');
+			c_print(($numImageDownloadsFailedOld - $result->numCarsUpdating) . ' cars skipped');
+			c_print($result->numImagesDownloaded     . ' images downloaded');
+			c_print($numImageDownloadsFailed . ' image downloads failed');
+			c_print($result->numUpdatedImages        . ' images updated');
+			c_print($result->numUpdateImagesFailed   . ' image updates failed');
 		}
 	}
 }
 
 $db->close();
 
-c_log('');
-c_log('*********************************************');
-c_log('Mining Complete');
-c_log('*********************************************');
+c_print('');
+c_print('*********************************************', true);
+c_print('Mining Complete');
+c_print('*********************************************', true);
 ?>

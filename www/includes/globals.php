@@ -68,12 +68,12 @@ function createCarSortName($carName)
 
 function proccessCarBaseImage($baseFilename)
 {
-	return runExternal(MINE_HWIP_LOCATION . ' "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING, 'hwip');
+	return runExternal(MINE_HWIP_LOCATION . ' "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING);
 }
 
 function generateCarImage($baseFilename, $newFilename, $width)
 {
-	return runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . $width . ' "' . $newFilename . '"', 'convert');
+	return runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . $width . ' "' . $newFilename . '"');
 }
 
 function runExternal($cmd, $logName)
