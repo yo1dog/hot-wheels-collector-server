@@ -30,17 +30,17 @@ try
 	$toyNumber = QRCodeUtility::getToyNumberFromQRCode($qrCodeData);
 	
 	$db = new DB();
-	$query = 'SELECT name, ' .
-	             '(SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned ' .
-	         'FROM cars WHERE toy_number = "' . $this->mysqli->real_escape_string($toyNumber) . '"';
+	$query = 'SELECT id, name, ' .
+	             '(SELECT 1 FROM collections WHERE user_id = "' . $db->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned ' .
+	         'FROM cars WHERE toy_number = "' . $db->mysqli->real_escape_string($toyNumber) . '"';
 	
-	$success = $this->mysqli->real_query($query);
+	$success = $db->mysqli->real_query($query);
 	if (!$success)
-		throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		throw new Exception('MySQL Error (' . $db->mysqli->errno . '): ' . $db->mysqli->error . "\n\nQuery:\n" . $query);
 	
-	$result = $this->mysqli->store_result();
+	$result = $db->mysqli->store_result();
 	if ($result === false)
-		throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		throw new Exception('MySQL Error (' . $db->mysqli->errno . '): ' . $db->mysqli->error . "\n\nQuery:\n" . $query);
 	
 	$row = $result->fetch_row();
 	
@@ -53,16 +53,16 @@ try
 	}
 	
 	$result->close();
-	$db->close();
 	
-	$carName        = $row[0];
-	$currentlyOwned = $row[1];
+	$carID          = $row[0];
+	$carName        = $row[1];
+	$currentlyOwned = $row[2] === '1';
 	
-	$result = new stdClass();
-	$result->carName      = $canName;
-	$result->ownedChanged = $owned !== $currentlyOwned;
+	$response = new stdClass();
+	$response->carName      = $carName;
+	$response->ownedChanged = $owned !== $currentlyOwned;
 	
-	if ($result->ownedChanged)
+	if ($response->ownedChanged)
 	{
 		if ($owned)
 		{
@@ -77,7 +77,7 @@ try
 	}
 	
 	header('Content-type: application/json');
-	echo json_encode($car);
+	echo json_encode($response);
 }
 catch (InvalidQRCodeException $e)
 {
