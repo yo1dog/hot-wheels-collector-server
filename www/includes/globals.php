@@ -66,17 +66,17 @@ function createCarSortName($carName)
 	return $sortName;
 }
 
-function proccessCarBaseImage($baseFilename)
+function proccessCarBaseImage($baseFilename, $newFilename)
 {
-	return runExternal(MINE_HWIP_LOCATION . ' "' . $baseFilename . '" "' . $baseFilename . '" ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING);
+	return runExternal(MINE_HWIP_LOCATION . ' ' .  escapeshellarg($baseFilename) . ' ' .  escapeshellarg($newFilename) . ' ' . MINE_HWIP_ALPHA_THRESHOLD . ' ' . MINE_HWIP_PADDING);
 }
 
 function generateCarImage($baseFilename, $newFilename, $width)
 {
-	return runExternal(MINE_CONVERT_LOCATION . ' "' . $baseFilename . '" -resize ' . $width . ' "' . $newFilename . '"');
+	return runExternal(MINE_CONVERT_LOCATION . ' ' .  escapeshellarg($baseFilename) . ' -resize ' .  escapeshellarg($width) . ' ' .  escapeshellarg($newFilename));
 }
 
-function runExternal($cmd, $logName)
+function runExternal($cmd)
 {
 	$cmd .= ' 2>&1';
 	$output = array();
@@ -90,7 +90,6 @@ function runExternal($cmd, $logName)
 			'cmd'     => $cmd,
 			'output'  => $output,
 			'status'  => $status,
-			'logName' => $logName
 		);
 	}
 	

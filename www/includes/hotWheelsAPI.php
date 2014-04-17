@@ -78,19 +78,29 @@ class HotWheelsAPI
 		return $str;
 	}
 	
-	private static function parseSection($str, &$index, $startStr, $endStr)
+	private static function parseSection($str, &$index, $startStr, $endStr, $lookingFor)
 	{
-		$index  = strpos($str, $startStr, $index) + strlen($startStr);
-		$index2 = strpos($str, $endStr,   $index);
+		$index  = self::requiredStrpos($str, $startStr, $index, $lookingFor) + strlen($startStr);
+		$index2 = strpos($str, $endStr, $index);
 		
 		return self::decodeHTMLText(substr($str, $index, $index2 - $index));
+	}
+	
+	private static function requiredStrpos($haystack, $needle, $offset, $lookingFor)
+	{
+		$index = strpos($haystack, $needle, $offset);
+		
+		if ($index === false)
+			throw new Exception("Unable to find \"$needle\" while looking for $lookingFor.");
+		
+		return $index;
 	}
 		
 
 	/**
 	 * Uses the HotWheels site search endpoint and parses the HTML response into a list of car detail URLs.
 	 *
-	 * Returns an array of car detail URLs on success or a string containing an error message.
+	 * Returns an array of car detail URLs on success or thows an exception.
 	 */
 	public static function search($query, $cURLTimeout = 30)
 	{
@@ -113,14 +123,14 @@ class HotWheelsAPI
 		// check for cURL errors
 		$cURLErrorNum = curl_errno($ch);
 		if ($cURLErrorNum !== 0)
-			return 'cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch);
+			throw new Exception('cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
 		
 		if ($cURLResult === false)
-			return 'cURL Error: unknown';
+			throw new Exception('cURL Error: unknown');
 		
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
-			return 'Request Error: Status code ' . $statusCode;
+			throw new Exception('Non-200 response status code: "' . $statusCode . '"');
 		
 		
 		// parse out the car detail URLs
@@ -141,7 +151,7 @@ class HotWheelsAPI
 	/**
 	 * Uses the HotWheels site details endpoint and parses the HTML response into a Car Model.
 	 *
-	 * Returns a Car Model on success or a string containing an error message.
+	 * Returns a Car Model on success or throws an exception.
 	 */
 	public static function getCar($carDetailURL, $cURLTimeout = 30)
 	{
@@ -157,18 +167,18 @@ class HotWheelsAPI
 		// check for cURL errors
 		$cURLErrorNum = curl_errno($ch);
 		if ($cURLErrorNum !== 0)
-			return 'cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch);
+			throw new Exception('cURL Error (' . $cURLErrorNum . '): ' . curl_error($ch));
 		
 		if ($cURLResult === false)
-			return 'cURL Error: unknown';
+			throw new Exception('cURL Error: unknown');
 		
 		$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		if ($statusCode !== 200)
 		{
 			if ($statusCode === 404 || $statusCode === 500) // they poorly handle invalid/non-existant ids and causes a 500
-				return 'Car not found';
+				throw new Exception('Car not found');
 
-			return 'Request Error: Status code ' . $statusCode;
+			throw new Exception('Non-200 response status code: "' . $statusCode . '"');
 		}
 
 		
@@ -178,22 +188,23 @@ class HotWheelsAPI
 		// ::::: CAR IMAGE ::::
 		// ...
 		// background-image: url(/en-us/Images/V5328_Toyota_Tundra_tcm838-123677_w351.png);
-		$index = strpos($cURLResult, '::::: CAR IMAGE ::::', $index);
-		$imagePath = self::parseSection($cURLResult, $index, 'url(', ')');
+		$index = self::requiredStrpos($cURLResult, '::::: CAR IMAGE ::::', $index, 'imagePath');
+		
+		$imagePath = self::parseSection($cURLResult, $index, 'url(', ')', 'imagePath');
 		
 		// <a id="wantButton" class="btn btn-med " href="javascript:void(0)" data-action="wantit" carTitle="&#39;10 Toyota Tundra" mainImageUrl ="" vehicleId="tcm:838-123678" carId="V5328" wantHave="Want" segment="2012 New Models" series="" make="Toyota" color="Black" style="Truck" segmentColor="" ><span class="icon icon-star"></span>Want It</a>
-		$name      = self::parseSection($cURLResult, $index, 'carTitle="',  '"');
-		$vehicleID = self::parseSection($cURLResult, $index, 'vehicleId="', '"');
-		$toyNumber = self::parseSection($cURLResult, $index, 'carId="',     '"');
-		$segment   = self::parseSection($cURLResult, $index, 'segment="',   '"');
-		$series    = self::parseSection($cURLResult, $index, 'series="',    '"');
-		$make      = self::parseSection($cURLResult, $index, 'make="',      '"');
-		$color     = self::parseSection($cURLResult, $index, 'color="',     '"');
-		$style     = self::parseSection($cURLResult, $index, 'style="',     '"');
+		$name      = self::parseSection($cURLResult, $index, 'carTitle="',  '"', 'name');
+		$vehicleID = self::parseSection($cURLResult, $index, 'vehicleId="', '"', 'vehicleID');
+		$toyNumber = self::parseSection($cURLResult, $index, 'carId="',     '"', 'toyNumber');
+		$segment   = self::parseSection($cURLResult, $index, 'segment="',   '"', 'segment');
+		$series    = self::parseSection($cURLResult, $index, 'series="',    '"', 'series');
+		$make      = self::parseSection($cURLResult, $index, 'make="',      '"', 'make');
+		$color     = self::parseSection($cURLResult, $index, 'color="',     '"', 'color');
+		$style     = self::parseSection($cURLResult, $index, 'style="',     '"', 'style');
 		
 		// <li><span class="label">Collected:</span> <span class="value">13606</span></li>
 		$index = strpos($cURLResult, 'Collected:', $index);
-		$numUsersCollected = trim(self::parseSection($cURLResult, $index, 'value">', '<'));
+		$numUsersCollected = trim(self::parseSection($cURLResult, $index, 'value">', '<', 'numUsersCollected'));
 		
 		if (!is_numeric($numUsersCollected))
 			$numUsersCollected = NULL;

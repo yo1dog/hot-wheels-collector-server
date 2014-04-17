@@ -293,7 +293,7 @@ class DB
 	// 0 - nothing
 	// 1 - car updated
 	// 2 - car inserted
-	public function insertOrUpdateCar($car, &$added, &$updated, &$changedFields)
+	public function insertOrUpdateCar($car, &$added, &$updated, &$updatedFields)
 	{
 		$vehicleID         = $this->mysqli->real_escape_string($car->vehicleID);
 		$name              = $this->mysqli->real_escape_string($car->name);
@@ -343,7 +343,7 @@ class DB
 		
 		if ($existingCar !== NULL)
 		{
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_query($existingCar['id']) . "\"";
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_escape_string($existingCar['id']) . "\"";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
@@ -351,17 +351,11 @@ class DB
 			
 			$added = false;
 			$updated = $this->mysqli->affected_rows > 0;
-			$updatedFields = array();
 			
 			$existingCar = new HW2Car($existingCar);
+			$updatedFields = $existingCar->diff($car);
 			
-			foreach ($car as $key => $value)
-			{
-				if ($value !== $existingCar->$key)
-					$updatedFields[$key] = array('from' => $existingCar->$key, 'to' => $value);
-			}
-			
-			return $car['id'];
+			return $existingCar->id;
 		}
 		else
 		{
