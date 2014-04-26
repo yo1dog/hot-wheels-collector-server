@@ -4,26 +4,30 @@ require '../../config.php';
 require '../includes/database.php';
 
 // make sure we got all our post data
-function postParam($postParamName)
+function requiredParam($requiredParamName, $post = true)
 {
-	if (!isset($_POST[$postParamName]))
+	$in = $post? $_POST : $_GET;
+	
+	if (!isset($in[$requiredParamName]))
 	{
 		http_response_code(400);
-		die('"' . $postParamName . '" missing from query string.');
+		die('"' . $requiredParamName . '" missing from ' . ($post? 'body' : 'query string'));
 	}
 	
-	return trim($_POST[$postParamName]);
+	return trim($in[$requiredParamName]);
 }
 
-$name                = postParam('name');
-$segment             = postParam('segment');
-$series              = postParam('series');
-$make                = postParam('make');
-$color               = postParam('color');
-$style               = postParam('style');
-$customToyNumber     = postParam('customToyNumber');
-$distinguishingNotes = postParam('distinguishingNotes');
-$barcodeData         = postParam('barcodeData');
+$userID              = requiredParam('userID', false);
+$addToCollection     = requiredParam('addToCollection', false) === '1';
+$name                = requiredParam('name');
+$segment             = requiredParam('segment');
+$series              = requiredParam('series');
+$make                = requiredParam('make');
+$color               = requiredParam('color');
+$style               = requiredParam('style');
+$customToyNumber     = requiredParam('customToyNumber');
+$distinguishingNotes = requiredParam('distinguishingNotes');
+$barcodeData         = requiredParam('barcodeData');
 
 // check post data
 if (strlen($name) === 0)
@@ -46,7 +50,7 @@ $sortName = createCarSortName($name);
 
 // insert new car
 $db = new DB();
-$carID = $db->insertCustomCar($name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData);
+$carID = $db->insertCustomCar($userID, $name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData);
 
 try
 {
@@ -132,6 +136,18 @@ try
 			$db->setCarImageName($carID, $imageName);
 		}
 	}
+	
+	
+	if ($addToCollection)
+	{
+		if (!$db->setCarOwned($userID, $carID))
+		{
+			http_response_code(404);
+			die('No car or user was not found.');
+		}
+	}
+	
+	http_response_code(201);
 }
 catch (Exception $e)
 {

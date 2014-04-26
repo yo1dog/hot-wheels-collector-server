@@ -16,7 +16,7 @@ class HW2Car
 	public $distinguishingNotes;
 	public $barcodeData;
 	
-	public $owned;
+	public $ownedTimestamp;
 	
 	private $sortName;
 	private $imageName;
@@ -41,7 +41,7 @@ class HW2Car
 		$this->distinguishingNotes = $assoc['distinguishing_notes'];
 		$this->barcodeData         = $assoc['barcode_data'];
 		
-		$this->owned = isset($assoc['owned'])? $assoc['owned'] === '1' : false;
+		$this->ownedTimestamp = $assoc['ownedTimestamp'] === NULL? NULL : intval($assoc['ownedTimestamp']);
 		
 		$this->sortName  = $assoc['sort_name'];
 		$this->imageName = $assoc['image_name'];

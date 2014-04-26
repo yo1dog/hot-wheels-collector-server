@@ -19,21 +19,8 @@ $userID = $_POST['userID'];
 $carID  = $_POST['carID'];
 
 $db = new DB();
-
-$timestamp;
-$alreadyOwned;
-if (!$db->setCarOwned($userID, $carID, $timestamp, $alreadyOwned))
-{
-	http_response_code(404);
-	die('No car or user was not found.');
-}
-
+$db->setCarUnowned($userID, $carID);
 $db->close();
 
-$response = new stdClass();
-$response->ownedTimestmap = $timestamp;
-$response->alreadyOwned = $alreadyOwned;
-
-header('Content-type: application/json');
-echo json_encode($response);
+http_response_code(204);
 ?>

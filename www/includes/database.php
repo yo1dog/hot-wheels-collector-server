@@ -16,7 +16,7 @@ class DB
 	}
 	
 	
-	public function search($searchQuery, $userID = NULL)
+	public function search($searchQuery, $userID = NULL, $page = 0, &$numPages)
 	{
 		$queryLike = NULL;
 		$terms = explode(' ', strtolower($searchQuery));
@@ -31,21 +31,18 @@ class DB
 			else
 				$queryLike .= ' AND ';
 			
-			$queryLike .= 'sort_name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($term)) . '%"';
+			$queryLike .= 'cars.sort_name LIKE "%' . str_replace("%", "\\%", $this->mysqli->real_escape_string($term)) . '%"';
 		}
 		
 		if ($queryLike === NULL)
 			return NULL;
-
-		$query = 'SELECT *';
 		
-		// todo: use join for is owned
+		$query = 'SELECT cars.*, ' . ($userID === NULL? 'NULL' : 'collections.timestamp') . ' AS ownedTimestamp FROM cars';
+		
 		if ($userID !== NULL)
-			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+			$query .= ' LEFT JOIN collections ON (collections.user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND collections.car_id = cars.id)';
 		
-		$query .= ' FROM cars WHERE ' . $queryLike . ' ORDER BY sort_name ASC LIMIT ' . HOTWHEELS2_MAX_NUM_SEARCH_RESULTS;
-		
-		
+		$query .= ' WHERE ' . $queryLike . ' ORDER BY sort_name ASC LIMIT ' . ($page * HOTWHEELS2_RESULTS_PER_PAGE) . ', ' . HOTWHEELS2_RESULTS_PER_PAGE;
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -62,12 +59,30 @@ class DB
 		
 		$result->close();
 		
+		
+		// get the number of pages
+		$query = 'SELECT COUNT(*) FROM cars WHERE ' . $queryLike;		
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$numCars = $result->fetch_row()[0];
+		$numPages = ceil($numCars / HOTWHEELS2_RESULTS_PER_PAGE);
+		if ($numPages < 1)
+			$numPages = 1;
+		
+		$result->close();
 		return $cars;
 	}
 	
-	public function getCollection($userID)
+	public function getCollection($userID)//, $page = 0, &$numPages)
 	{
-		$query = 'SELECT cars.* FROM collections LEFT JOIN cars ON (cars.id = collections.car_id) WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" ORDER BY sort_name ASC';
+		$queryWhere = 'user_id = "' . $this->mysqli->real_escape_string($userID) . '"';
+		$query = 'SELECT cars.*, collections.timestamp AS ownedTimestamp FROM collections LEFT JOIN cars ON (cars.id = collections.car_id) WHERE ' . $queryWhere . ' ORDER BY sort_name ASC';// LIMIT ' . ($page * HOTWHEELS2_RESULTS_PER_PAGE) . ', ' . HOTWHEELS2_RESULTS_PER_PAGE;
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -82,18 +97,35 @@ class DB
 			$cars[] = new HW2Car($row);
 		
 		$result->close();
+		
+		// get the number of pages
+		/*$query = 'SELECT COUNT(*) FROM collections WHERE ' . $queryWhere;
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$numCars = $result->fetch_row()[0];
+		$numPages = ceil($numCars / HOTWHEELS2_RESULTS_PER_PAGE);
+		if ($numPages < 1)
+			$numPages = 1;
+		
+		$result->close();*/
 		
 		return $cars;
 	}
 	
 	public function getCar($carID, $userID)
 	{
-		$query = 'SELECT *';
+		$query = 'SELECT cars.*, ' . ($userID === NULL? 'NULL' : 'collections.timestamp') . ' AS ownedTimestamp FROM cars';
 		
 		if ($userID !== NULL)
-			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+			$query .= ' LEFT JOIN collections ON (collections.user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND collections.car_id = cars.id)';
 		
-		$query .= ' FROM cars WHERE id = "' . $this->mysqli->real_escape_string($carID) . '"';
+		$query .= ' WHERE id = "' . $this->mysqli->real_escape_string($carID) . '"';
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -111,17 +143,17 @@ class DB
 		
 		$result->close();
 		
-		return $car;	
+		return $car;
 	}
 	
 	public function getCarByToyNumber($toyNumber, $userID)
 	{
-		$query = 'SELECT *';
+		$query = 'SELECT cars.*, ' . ($userID === NULL? 'NULL' : 'collections.timestamp') . ' AS ownedTimestamp FROM cars';
 		
 		if ($userID !== NULL)
-			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+			$query .= ' LEFT JOIN collections ON (collections.user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND collections.car_id = cars.id)';
 		
-		$query .= ' FROM cars WHERE toy_number = "' . $this->mysqli->real_escape_string($toyNumber) . '"';
+		$query .= ' WHERE toy_number = "' . $this->mysqli->real_escape_string($toyNumber) . '"';
 				
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -144,12 +176,12 @@ class DB
 	
 	public function getMostCollectedCars($userID = NULL)
 	{
-		$query = 'SELECT *';
+		$query = 'SELECT cars.*, ' . ($userID === NULL? 'NULL' : 'collections.timestamp') . ' AS ownedTimestamp FROM cars';
 		
 		if ($userID !== NULL)
-			$query .= ', (SELECT 1 FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id) AS owned';
+			$query .= ' LEFT JOIN collections ON (collections.user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND collections.car_id = cars.id)';
 		
-		$query .= ' FROM cars ORDER BY num_users_collected DESC LIMIT ' . HOTWHEELS2_MAX_NUM_MOST_COLLECTED;
+		$query .= ' ORDER BY num_users_collected DESC LIMIT ' . HOTWHEELS2_MAX_NUM_MOST_COLLECTED;
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -171,17 +203,16 @@ class DB
 	
 	public function getCollectionRemovals($userID)
 	{
+		$userID = $this->mysqli->real_escape_string($userID);
+		
 		$query = '
-		SELECT
-			cars.*,
-			(
-				SELECT 1
-				FROM collections
-				WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = cars.id
-			) AS owned
+		SELECT cars.*, collections.timestamp AS ownedTimestamp
 		FROM collection_removals
 		LEFT JOIN cars ON (cars.id = collection_removals.car_id)
-		WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" ORDER BY timestamp DESC LIMIT ' . HOTWHEELS2_MAX_NUM_REMOVALS;
+		LEFT JOIN collections ON (collections.user_id = "' . $userID . '" AND collections.car_id = cars.id)
+		WHERE collection_removals.user_id = "' . $userID . '"
+		ORDER BY collection_removals.timestamp DESC
+		LIMIT ' . HOTWHEELS2_MAX_NUM_REMOVALS;
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
@@ -203,18 +234,39 @@ class DB
 	
 	
 	
-	public function setCarOwned($userID, $carID)
+	public function setCarOwned($userID, $carID, &$newTimestamp, &$alreadyOwned)
 	{
-		$query = 'INSERT INTO collections (user_id, car_id) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string($carID) . '")';
+		// check if already owned
+		$query = 'SELECT timestamp FROM collections WHERE user_id = "' . $this->mysqli->real_escape_string($userID) . '" AND car_id = "' . $this->mysqli->real_escape_string($carID) . '"';
+		$success = $this->mysqli->real_query($query);
+		if (!$success)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$result = $this->mysqli->store_result();
+		if ($result === false)
+			throw new Exception('MySQL Error (' . $this->mysqli->errno . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
+		
+		$row = $result->fetch_row();
+		$result->close();
+		
+		if ($row)
+		{
+			$newTimestamp = intval($row[0]);
+			$alreadyOwned = true;
+			
+			return true;
+		}
+		
+		$alreadyOwned = false;
+		
+		// add the car to collection
+		$timestamp = time();
+		$query = 'INSERT INTO collections (user_id, car_id, timestamp) VALUES ("' . $this->mysqli->real_escape_string($userID) . '", "' . $this->mysqli->real_escape_string($carID) . '", ' . $timestamp . ')';
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
 		{
 			$mysqlErrorNum = $this->mysqli->errno;
-			
-			// don't worry about duplicate unique keys. this just means the user already owns the car
-			if ($mysqlErrorNum === 1062)
-				return true;
 			
 			// car or user does not exist
 			if ($mysqlErrorNum === 1452)
@@ -223,6 +275,7 @@ class DB
 			throw new Exception('MySQL Error (' . $mysqlErrorNum . '): ' . $this->mysqli->error . "\n\nQuery:\n" . $query);
 		}
 		
+		$newTimestamp = $timestamp;
 		return true;
 	}
 	
@@ -412,8 +465,9 @@ class DB
 	}
 	
 	
-	public function insertCustomCar($name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData)
+	public function insertCustomCar($creatorUserID, $name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData)
 	{
+		$creatorUserID       = $this->mysqli->real_escape_string($creatorUserID);
 		$name                = $this->mysqli->real_escape_string($name);
 		$segment             = $this->mysqli->real_escape_string($segment);
 		$series              = $this->mysqli->real_escape_string($series);
