@@ -18,7 +18,7 @@ class HW2Car
 	
 	public $ownedTimestamp;
 	
-	private $sortName;
+	public $sortName;
 	private $imageName;
 	
 	public $imageURL;
@@ -41,13 +41,13 @@ class HW2Car
 		$this->distinguishingNotes = $assoc['distinguishing_notes'];
 		$this->barcodeData         = $assoc['barcode_data'];
 		
-		$this->ownedTimestamp = $assoc['ownedTimestamp'] === NULL? NULL : intval($assoc['ownedTimestamp']);
+		$this->ownedTimestamp = !isset($assoc['ownedTimestamp']) || $assoc['ownedTimestamp'] === NULL? NULL : intval($assoc['ownedTimestamp']);
 		
 		$this->sortName  = $assoc['sort_name'];
 		$this->imageName = $assoc['image_name'];
 		
-		$this->imageURL       = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $assoc['image_name'] . HOTWHEELS2_IMAGE_ICON_SUFFIX   . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
-		$this->detailImageURL = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_BASE_IMAGE_URL . $assoc['image_name'] . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
+		$this->imageURL       = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_S3_BASE_IMAGE_URL . HOTWHEELS2_S3_IMAGES_ICON_KEY_BASE_PATH   . $assoc['image_name'] . HOTWHEELS2_IMAGE_ICON_SUFFIX   . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
+		$this->detailImageURL = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_S3_BASE_IMAGE_URL . HOTWHEELS2_S3_IMAGES_DETAIL_KEY_BASE_PATH . $assoc['image_name'] . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
 	}
 	
 	

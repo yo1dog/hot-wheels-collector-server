@@ -76,6 +76,22 @@ function generateCarImage($baseFilename, $newFilename, $width)
 	return runExternal(MINE_CONVERT_LOCATION . ' ' .  escapeshellarg($baseFilename) . ' -resize ' .  escapeshellarg($width) . ' ' .  escapeshellarg($newFilename));
 }
 
+function copyImageToS3($filename, $s3Bucket, $isDetails)
+{
+	return runExternal('aws s3 cp ' .
+			escapeshellarg($filename) . ' ' .
+			escapeshellarg('s3://' . $s3Bucket . '/' . ($isDetails? HOTWHEELS2_S3_IMAGES_DETAIL_KEY_BASE_PATH : HOTWHEELS2_S3_IMAGES_ICON_KEY_BASE_PATH))
+		);
+}
+
+function syncImagesWithS3($s3Bucket, $isDetails)
+{
+	return runExternal('aws s3 sync ' .
+			escapeshellarg(HOTWHEELS2_IMAGE_PATH . ($isDetails? HOTWHEELS2_IMAGE_DETAIL_DIR : HOTWHEELS2_IMAGE_ICON_DIR)) . ' ' .
+			escapeshellarg('s3://' . $s3Bucket . '/' . ($isDetails? HOTWHEELS2_S3_IMAGES_DETAIL_KEY_BASE_PATH : HOTWHEELS2_S3_IMAGES_ICON_KEY_BASE_PATH))
+		);
+}
+
 function runExternal($cmd)
 {
 	$cmd .= ' 2>&1';
@@ -84,16 +100,11 @@ function runExternal($cmd)
 
 	exec($cmd, $output, $status);
 	
-	if ($status !== 0 || count($output) > 0)
-	{
-		return array(
-			'cmd'     => $cmd,
-			'output'  => $output,
-			'status'  => $status,
-		);
-	}
-	
-	return true;
+	return array(
+		'cmd'     => $cmd,
+		'output'  => $output,
+		'status'  => $status,
+	);
 }
 
 // TODO: user system
