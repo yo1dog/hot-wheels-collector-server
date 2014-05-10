@@ -1,8 +1,5 @@
 <?php
-require '../includes/globals.php';
-require '../../config.php';
-require	'../includes/hotWheels2Models.php';
-require '../includes/database.php';
+require_once __DIR__ . '/../../utils/database.php';
 
 $userID = isset($_GET['userID']) ? $_GET['userID'] : NULL;
 

@@ -1,14 +1,9 @@
 <?php
-if (!isset($_GET['userID']))
-{
-	http_response_code(400);
-	die('"userID" missing from query string.');
-}
+require_once __DIR__ . '/../../utils/httpExceptionHandler.php';
+require_once __DIR__ . '/../../utils/database.php';
 
-require '../includes/globals.php';
-require '../../config.php';
-require	'../includes/hotWheels2Models.php';
-require '../includes/database.php';
+if (!isset($_GET['userID']))
+	throw new HTTPException(400, '"userID" missing from query string.');
 
 $userID = $_GET['userID'];
 

@@ -1,20 +1,17 @@
 <?php
+require_once __DIR__ . '/../utils/database.php';
+require_once __DIR__ . '/../utils/authManager.php';
+
 if (!isset($_GET['carID']))
 {
 	http_response_code(400);
 	die('"carID" missing from query string.');
 }
 
-require 'includes/globals.php';
-require '../config.php';
-
-require 'includes/hotWheels2Models.php';
-require 'includes/database.php';
-
 $carID = $_GET['carID'];
 
 $db = new DB();
-$car = $db->getCar($carID, $__USER_ID);
+$car = $db->getCar($carID, AuthManager::getLoggedInUser());
 $db->close();
 
 if ($car === NULL)
@@ -23,7 +20,7 @@ if ($car === NULL)
 	die('carID "' . $carID . '" not found.');
 }
 
-include 'includes/header.php';
+include __DIR__ . '/header.php';
 ?>
 
 <h1><?php echo $car->name; ?></h1>
@@ -66,11 +63,11 @@ include 'includes/header.php';
 </table>
 
 <script type="text/javascript">
-var __USER_ID =	"<?php echo $__USER_ID; ?>";
+var __USER_ID =	"<?php echo AuthManager::getLoggedInUser(); ?>";
 
-<?php include 'js/toggleCarOwned.js'; ?>
+<?php include __DIR__ . '/js/toggleCarOwned.js'; ?>
 </script>
 
 <?php
-include 'includes/footer.html';
+include __DIR__ . '/footer.php';
 ?>

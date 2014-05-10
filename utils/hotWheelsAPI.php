@@ -1,21 +1,25 @@
 <?php
+
 define('HOTWHEELS_SEARCH_ENDPOINT_URL', 'http://www.hotwheels.com/CarCollectionsRWD/DisplaySearchVehicles');
 define('HOTWHEELS_BASE_IMAGE_URL',      'http://www.hotwheels.com');
 
-class Car
+/**
+ * Represents a car from the Hot Wheels website.
+ */
+class HotWheelsCar
 {
-	public $vehicleID;
-	public $name;
-	public $toyNumber;
-	public $segment;
-	public $series;
-	public $make;
-	public $color;
-	public $style;
-	public $numUsersCollected;
+	/** @var string   */ public $vehicleID;
+	/** @var string   */ public $name;
+	/** @var string   */ public $toyNumber;
+	/** @var string   */ public $segment;
+	/** @var string   */ public $series;
+	/** @var string   */ public $make;
+	/** @var string   */ public $color;
+	/** @var string   */ public $style;
+	/** @var int|null */ public $numUsersCollected;
 
-	private $imageURLBeforeWidth;
-	private $imageURLAfterWidth;
+	/** @var string   */ private $imageURLBeforeWidth;
+	/** @var string   */ private $imageURLAfterWidth;
 	
 	public function __construct(
 		$vehicleID,
@@ -42,23 +46,29 @@ class Car
 		
 		// split the url on the image width
 		$index1 = strrpos($imagePath, '_w') + 2;
-		$index2 = NULL;		
+		$index2 = $index1;
 		
-		for ($i = $index1; $i < strlen($imagePath); ++$i)
+		for (; $index2 < strlen($imagePath); ++$index2)
 		{
-			$char = ord($imagePath[$i]);
+			$char = ord($imagePath[$index2]);
 			
 			if ($char < 48 || $char > 57)
-			{
-				$index2 = $i;
 				break;
-			}
 		}
 		
 		$this->imageURLBeforeWidth = HOTWHEELS_BASE_IMAGE_URL . substr($imagePath, 0, $index1);
-		$this->imageURLAfterWidth = $index2 === NULL? '' : substr($imagePath, $index2);
+		
+		$after = substr($imagePath, $index2);
+		if ($after === false)
+			$after = '';
+		
+		$this->imageURLAfterWidth = $after ;
 	}
 	
+	
+	/**
+	* Creates an image URL with the given width.
+	*/
 	public function getImageURL($width)
 	{
 		return $this->imageURLBeforeWidth . $width . $this->imageURLAfterWidth;
@@ -68,22 +78,17 @@ class Car
 
 class HotWheelsAPI
 {
+	/**
+	 * Converts HTML hex strings into characters.
+	 */
 	private static function decodeHTMLText($str)
 	{
 		$str = trim($str);
 		$str = html_entity_decode($str);
-		$str = preg_replace('/&#(\d+);/me', 'chr(\\1)', $str);
+		$str = preg_replace('/&#(\\d+);/me', 'chr(\\1)', $str);
 		$str = preg_replace('/&#x([a-f0-9]+);/mei', 'chr(0x\\1)', $str);
 		
 		return $str;
-	}
-	
-	private static function parseSection($str, &$index, $startStr, $endStr, $lookingFor)
-	{
-		$index  = self::requiredStrpos($str, $startStr, $index, $lookingFor) + strlen($startStr);
-		$index2 = strpos($str, $endStr, $index);
-		
-		return self::decodeHTMLText(substr($str, $index, $index2 - $index));
 	}
 	
 	private static function requiredStrpos($haystack, $needle, $offset, $lookingFor)
@@ -95,12 +100,24 @@ class HotWheelsAPI
 		
 		return $index;
 	}
+	
+	private static function parseSection($str, &$index, $startStr, $endStr, $lookingFor)
+	{
+		$index  = self::requiredStrpos($str, $startStr, $index, $lookingFor) + strlen($startStr);
+		$index2 = self::requiredStrpos($str, $endStr,   $index, $lookingFor);
+		
+		return self::decodeHTMLText(substr($str, $index, $index2 - $index));
+	}
 		
 
 	/**
-	 * Uses the HotWheels site search endpoint and parses the HTML response into a list of car detail URLs.
+	 * Uses the Hot Wheels site search endpoint and parses the HTML response into a list of car detail URLs.
 	 *
-	 * Returns an array of car detail URLs on success or thows an exception.
+	 * @param string $query       String to search with.
+	 * @param int    $cURLTimeout Timeout limit of the cURL request in seconds.
+	 *
+	 * @return string[] An array of car detail URLs.
+	 * @throws Exception on error.
 	 */
 	public static function search($query, $cURLTimeout = 30)
 	{
@@ -132,16 +149,17 @@ class HotWheelsAPI
 		if ($statusCode !== 200)
 			throw new Exception('Non-200 response status code: "' . $statusCode . '"');
 		
+		$searchPage = $cURLResult;
 		
 		// parse out the car detail URLs
 		$carDetailURLs = array();
 		
 		$index = 0;
-		while (($index = strpos($cURLResult, 'href="', $index)) !== false)
+		while (($index = strpos($searchPage, 'href="', $index)) !== false)
 		{
 			$index += 6;
-			$index2 = strpos($cURLResult, '"', $index);
-			$carDetailURLs[] = substr($cURLResult, $index, $index2 - $index);
+			$index2 = strpos($searchPage, '"', $index);
+			$carDetailURLs[] = substr($searchPage, $index, $index2 - $index);
 		}
 		
 		return $carDetailURLs;
@@ -149,9 +167,13 @@ class HotWheelsAPI
 	
 	
 	/**
-	 * Uses the HotWheels site details endpoint and parses the HTML response into a Car Model.
-	 *
-	 * Returns a Car Model on success or throws an exception.
+	 * Uses the Hot Wheels site details endpoint and parses the HTML response into a Car Model.
+	 * 
+	 * @param string $carDetailURL Detail URL of the car.
+	 * @param int    $cURLTimeout  Timeout limit of the cURL request in seconds.
+	 * 
+	 * @return HotWheelsCar
+	 * @throws Exception
 	 */
 	public static function getCar($carDetailURL, $cURLTimeout = 30)
 	{
@@ -180,6 +202,8 @@ class HotWheelsAPI
 
 			throw new Exception('Non-200 response status code: "' . $statusCode . '"');
 		}
+		
+		$carDetailPage = $cURLResult;
 
 		
 		// parse the car
@@ -188,31 +212,30 @@ class HotWheelsAPI
 		// ::::: CAR IMAGE ::::
 		// ...
 		// background-image: url(/en-us/Images/V5328_Toyota_Tundra_tcm838-123677_w351.png);
-		$index = self::requiredStrpos($cURLResult, '::::: CAR IMAGE ::::', $index, 'imagePath');
+		$index = self::requiredStrpos($carDetailPage, '::::: CAR IMAGE ::::', $index, 'imagePath');
 		
-		$imagePath = self::parseSection($cURLResult, $index, 'url(', ')', 'imagePath');
+		$imagePath = self::parseSection($carDetailPage, $index, 'url(', ')', 'imagePath');
 		
 		// <a id="wantButton" class="btn btn-med " href="javascript:void(0)" data-action="wantit" carTitle="&#39;10 Toyota Tundra" mainImageUrl ="" vehicleId="tcm:838-123678" carId="V5328" wantHave="Want" segment="2012 New Models" series="" make="Toyota" color="Black" style="Truck" segmentColor="" ><span class="icon icon-star"></span>Want It</a>
-		$name      = self::parseSection($cURLResult, $index, 'carTitle="',  '"', 'name');
-		$vehicleID = self::parseSection($cURLResult, $index, 'vehicleId="', '"', 'vehicleID');
-		$toyNumber = self::parseSection($cURLResult, $index, 'carId="',     '"', 'toyNumber');
-		$segment   = self::parseSection($cURLResult, $index, 'segment="',   '"', 'segment');
-		$series    = self::parseSection($cURLResult, $index, 'series="',    '"', 'series');
-		$make      = self::parseSection($cURLResult, $index, 'make="',      '"', 'make');
-		$color     = self::parseSection($cURLResult, $index, 'color="',     '"', 'color');
-		$style     = self::parseSection($cURLResult, $index, 'style="',     '"', 'style');
+		$name      = self::parseSection($carDetailPage, $index, 'carTitle="',  '"', 'name');
+		$vehicleID = self::parseSection($carDetailPage, $index, 'vehicleId="', '"', 'vehicleID');
+		$toyNumber = self::parseSection($carDetailPage, $index, 'carId="',     '"', 'toyNumber');
+		$segment   = self::parseSection($carDetailPage, $index, 'segment="',   '"', 'segment');
+		$series    = self::parseSection($carDetailPage, $index, 'series="',    '"', 'series');
+		$make      = self::parseSection($carDetailPage, $index, 'make="',      '"', 'make');
+		$color     = self::parseSection($carDetailPage, $index, 'color="',     '"', 'color');
+		$style     = self::parseSection($carDetailPage, $index, 'style="',     '"', 'style');
 		
 		// <li><span class="label">Collected:</span> <span class="value">13606</span></li>
-		$index = strpos($cURLResult, 'Collected:', $index);
-		$numUsersCollected = trim(self::parseSection($cURLResult, $index, 'value">', '<', 'numUsersCollected'));
+		$index = strpos($carDetailPage, 'Collected:', $index);
+		$numUsersCollectedStr = trim(self::parseSection($carDetailPage, $index, 'value">', '<', 'numUsersCollected'));
 		
-		if (!is_numeric($numUsersCollected))
-			$numUsersCollected = NULL;
-		else
-			$numUsersCollected = intval($numUsersCollected);
+		$numUsersCollected = NULL;
+		if (is_numeric($numUsersCollectedStr))
+			$numUsersCollected = intval($numUsersCollectedStr);
 		
 		
-		return new Car(
+		return new HotWheelsCar(
 			$vehicleID,
 			$name,
 			$toyNumber,

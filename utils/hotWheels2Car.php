@@ -1,5 +1,10 @@
 <?php
-class HW2Car
+define('IMAGE_NAME_TRUNCATE_LENGTH', 32);
+
+//TODO: search for "details" and reaplce with "detail" (image)
+require_once __DIR__ . '/imageManager.php';
+
+class HotWheels2Car
 {
 	public $id;
 	public $vehicleID;
@@ -21,7 +26,7 @@ class HW2Car
 	public $sortName;
 	private $imageName;
 	
-	public $imageURL;
+	public $iconImageURL;
 	public $detailImageURL;
 	
 	public function __construct($assoc)
@@ -46,8 +51,17 @@ class HW2Car
 		$this->sortName  = $assoc['sort_name'];
 		$this->imageName = $assoc['image_name'];
 		
-		$this->imageURL       = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_S3_BASE_IMAGE_URL . HOTWHEELS2_S3_IMAGES_ICON_KEY_BASE_PATH   . $assoc['image_name'] . HOTWHEELS2_IMAGE_ICON_SUFFIX   . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
-		$this->detailImageURL = $assoc['image_name'] === NULL? NULL : HOTWHEELS2_S3_BASE_IMAGE_URL . HOTWHEELS2_S3_IMAGES_DETAIL_KEY_BASE_PATH . $assoc['image_name'] . HOTWHEELS2_IMAGE_DETAIL_SUFFIX . ($this->isCustom? HOTWHEELS2_IMAGE_CUSTOM_EXT : HOTWHEELS2_IMAGE_EXT);
+		
+		if ($this->imageName === NULL)
+		{
+			$this->iconImageURL   = NULL;
+			$this->detailImageURL = NULL;
+		}
+		else
+		{
+			$this->iconImageURL   = ImageManager::getImageURL($this->imageName, CAR_IMAGE_TYPE_ICON,   $this->isCustom);
+			$this->detailImageURL = ImageManager::getImageURL($this->imageName, CAR_IMAGE_TYPE_DETAIL, $this->isCustom);
+		}
 	}
 	
 	
@@ -62,6 +76,47 @@ class HW2Car
 		}
 		
 		return $diffFields;
+	}
+	
+	public static function createCarImageName($carID, $carName)
+	{
+		$imageName = preg_replace('/[^a-zA-Z0-9 ]/', '', $carName);
+		
+		if (strlen($imageName) > IMAGE_NAME_TRUNCATE_LENGTH)
+			$imageName = substr($imageName, 0, IMAGE_NAME_TRUNCATE_LENGTH);
+		
+		$imageName = str_replace(' ', '_', strtolower($imageName));
+		
+		return $carID . '_' . $imageName;
+	}
+	
+	public static function createCarSortName($carName)
+	{
+		$sortName = strtolower($carName);
+		$sortName = preg_replace('/[^a-z0-9 ]/', '', $sortName);
+		
+		if (preg_match('/^[0-9]+s/', $sortName))
+		{
+			$index = strpos($sortName, 's');
+			$sortName = substr($sortName, 0, $index) . substr($sortName, $index + 1);
+		}
+		
+		if (strpos($sortName, 'the ') === 0)
+			$sortName = substr($sortName, 4);
+		
+		$sortName = str_replace(' ', '', $sortName);
+		
+		$matches = NULL;
+		if (preg_match('/^[0-9]+/', $sortName, $matches))
+		{
+			if (count($matches) > 0)
+			{
+				$yearStr = $matches[0];			
+				$sortName = substr($sortName, strlen($yearStr)) . ' ' . $yearStr;
+			}
+		}
+		
+		return $sortName;
 	}
 }
 ?>

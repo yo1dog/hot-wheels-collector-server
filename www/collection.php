@@ -1,17 +1,13 @@
 <?php
-require 'includes/globals.php';
-require '../config.php';
-
-require 'includes/hotWheels2Models.php';
-require 'includes/database.php';
-require 'includes/templates.php';
+require_once __DIR__ . '/../utils/database.php';
+require_once __DIR__ . '/../utils/authManager.php';
+require_once __DIR__ . '/templates.php';
 
 $db = new DB();
-$cars = $db->getCollection($__USER_ID);
+$cars = $db->getCollection(AuthManager::getLoggedInUser());
 $db->close();
 
-include 'includes/header.php';
-
+include __DIR__ . '/header.php';
 echo '<br />';
 
 if (count($cars))
@@ -21,13 +17,13 @@ if (count($cars))
 	?>
 
 <script type="text/javascript">
-var __USER_ID =	"<?php echo $__USER_ID; ?>";
+var __USER_ID =	"<?php echo AuthManager::getLoggedInUser(); ?>";
 
-<?php include "js/toggleCarOwned.js"; ?>
+<?php include __DIR__ . '/js/toggleCarOwned.js'; ?>
 </script>
 
 	<?php
 }
 
-include 'includes/footer.html';
+include __DIR__ . '/footer.php';
 ?>

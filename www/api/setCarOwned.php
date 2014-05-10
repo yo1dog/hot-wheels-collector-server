@@ -1,32 +1,22 @@
 <?php
-if (!isset($_POST['userID']))
-{
-	http_response_code(400);
-	die('"userID" missing from POST data.');
-}
-if (!isset($_POST['carID']))
-{
-	http_response_code(400);
-	die('"carID" missing from POST data.');
-}
+require_once __DIR__ . '/../../utils/httpExceptionHandler.php';
+require_once __DIR__ . '/../../utils/database.php';
 
-require '../includes/globals.php';
-require '../../config.php';
-require	'../includes/hotWheels2Models.php';
-require '../includes/database.php';
+if (!isset($_POST['userID']))
+	throw new HTTPException(400, '"userID" missing from POST data.');
+
+if (!isset($_POST['carID']))
+	throw new HTTPException(400, '"carID" missing from POST data.');
 
 $userID = $_POST['userID'];
 $carID  = $_POST['carID'];
 
 $db = new DB();
 
-$timestamp;
-$alreadyOwned;
+$timestamp = NULL;
+$alreadyOwned = NULL;
 if (!$db->setCarOwned($userID, $carID, $timestamp, $alreadyOwned))
-{
-	http_response_code(404);
-	die('No car or user was not found.');
-}
+	throw new HTTPException(404, 'No car or user was not found.');
 
 $db->close();
 

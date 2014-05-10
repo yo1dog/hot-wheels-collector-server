@@ -1,16 +1,10 @@
 <?php
-require 'includes/globals.php';
-require '../config.php';
-
-require 'includes/hotWheels2Models.php';
-require 'includes/database.php';
-
-include 'includes/header.php';
+include __DIR__ . '/header.php';
 ?>
 
 <br />
 
-<form method="POST" action="/api/addCustomCar.php" enctype="multipart/form-data">
+<form method="POST" action="/api/addCustomCar.php?userID=1&addToCollection=0" enctype="multipart/form-data">
 	<table>
 		<tr>
 			<th><label for="name">Name:</label></th>
@@ -60,5 +54,5 @@ include 'includes/header.php';
 	
 
 <?php
-include 'includes/footer.html';
+include __DIR__ . '/footer.php';
 ?>

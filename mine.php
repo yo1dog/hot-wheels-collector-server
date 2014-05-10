@@ -2,19 +2,10 @@
 $usageHelp = <<<EOT
 php mine.php <flags>
 
--b -s3Bucket <bucket name> : S3 bucket to copy images to.
-                             Without this flag, HOTWHEELS2_S3_IMAGES_BUCKET from
-                             config.php is used.
-
 -d -redownloadBaseImages   : Download and replace base images, even if they already exist.
                              Base images are used to generate the icon and detail images.
                              Without this flag we only download base images if they do not
                              exist.
-
--p -imagesPath <path>      : Store the car images under the given path. Should be an
-                             absolute path.
-                             Without this flag, HOTWHEELS2_IMAGE_PATH from config.php is
-                             used.
 
 -g -regenerateImages       : Regenerate and replace the icon and detail images from the
                              base images even if they already exist.
@@ -47,11 +38,18 @@ php mine.php <flags>
 
 EOT;
 
-require 'config.php';
-require 'www/includes/globals.php';
-require 'www/includes/hotWheelsAPI.php';
-require 'www/includes/database.php';
-require 'www/includes/hotWheels2Models.php';
+
+function customErrorHandler($errno, $errstr, $errfile, $errline )
+{
+    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+}
+set_error_handler("customErrorHandler");
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/utils/hotWheelsAPI.php';
+require_once __DIR__ . '/utils/database.php';
+require_once __DIR__ . '/utils/hotWheels2Car.php';
+require_once __DIR__ . '/utils/imageManager.php';
 
 
 /*****************************************************************************************************
@@ -71,6 +69,10 @@ $carsUpdated = array();
 
 
 // handles printing verbose and non-verbose output
+/**
+ * @param string  $str 
+ * @param boolean $isVerbose 
+ */
 function c_print($str, $isVerbose = false)
 {
 	global $verbose, $quietMode, $explicitOutputLength;
@@ -87,12 +89,12 @@ function c_print($str, $isVerbose = false)
 }
 
 // handles printing an external execution's failure
-function printExternalResult($result)
+function printExternalResult(ExternalProcessResult $result)
 {
 	c_print('----------');
-	c_print($result['cmd']);
+	c_print($result->cmd);
 	
-	foreach ($result['output'] as $line)
+	foreach ($result->output as $line)
 		c_print($line);
 	
 	c_print('----------');
@@ -200,21 +202,6 @@ function printTable($rows, $verbose = false)
  *****************************************************************************************************
  *****************************************************************************************************/
 
-function getDetailURLs($searchTerm)
-{
-	try
-	{
-		return HotWheelsAPI::search($searchTerm, 300);
-	}
-	catch (Exception $e)
-	{
-		c_print('ERROR: HotWheelsAPI returned an error while searching.');
-		c_print($e->getMessage());
-		
-		return NULL;
-	}
-}
-
 /*****************************************************************************************************
  * Get Cars
  * 
@@ -263,7 +250,7 @@ function getCars($detailURLs, $db, &$cars)
 		
 		++$numDetailURLsTried;
 		
-		$car;
+		$car = NULL;
 		try
 		{
 			$car = HotWheelsAPI::getCar($detailURL);
@@ -271,7 +258,7 @@ function getCars($detailURLs, $db, &$cars)
 		catch (Exception $e)
 		{
 			c_print("ERROR: HotWheels2API returned an error while getting a car for detail URL: \"$detailURL\"");
-			c_print($e->getMessage());
+			c_print($e->__toString());
 			$nonVerboseOutputLastIteration = true;
 			
 			$detailURLsFailed[] = $detailURL;
@@ -280,7 +267,7 @@ function getCars($detailURLs, $db, &$cars)
 		
 		
 		
-		// cleanField the fields
+		// clean the fields
 		$car->vehicleID = strtolower($car->vehicleID);
 		$car->name      = cleanField($car->name);
 		$car->toyNumber = strtoupper(cleanField($car->toyNumber));
@@ -291,7 +278,7 @@ function getCars($detailURLs, $db, &$cars)
 		$car->style     = cleanField($car->style);
 		
 		// add sortname
-		$car->sortName  = createCarSortName($car->name);
+		$car->sortName  = HotWheels2Car::createCarSortName($car->name);
 		
 		c_print('Found car: ' . carToString($car), true);
 		++$numCarsFound;
@@ -302,102 +289,120 @@ function getCars($detailURLs, $db, &$cars)
 		$added = false;
 		try
 		{
-			$updated = false;
-			$updatedFields = NULL;
-			
+			if (!$db->mysqli->autocommit(false))
+				throw new Exception("Unable to set autocommit to false.\nMySQL Error ({$this->mysqli->errno}): {$this->mysqli->error}");
+				
 			try
 			{
-				$car->id = $db->insertOrUpdateCar($car, $added, $updated, $updatedFields);
-			}
-			catch (Exception $e)
-			{
-				$e->__from = "insertOrUpdateCar";
-				throw $e;
-			}
+				$updated = false;
+				$updatedFields = NULL;
 			
-			if ($added)
-			{
-				$car->imageName = createCarImageName($car->id, $car->name);
-				
 				try
 				{
-					$db->setCarImageName($car->id, $car->imageName);
+					$car->id = $db->insertOrUpdateCar($car, $added, $updated, $updatedFields);
 				}
 				catch (Exception $e)
 				{
-					$e->__from = "setCarImageName";
+					$e->__from = "insertOrUpdateCar";
 					throw $e;
 				}
+			
+				if ($added)
+				{
+					$car->imageName = HotWheels2Car::createCarImageName($car->id, $car->name);
 				
-				c_print('New car added: ' . carToString($car));
-				$carsAdded[] = $car;
-				++$numCarsAdded;
-			}
-			else
-			{
-				try
-				{
-					$car->imageName = $db->getCarImageName($car->id);
-				}
-				catch (Exception $e)
-				{
-					$e->__from = "getCarImageName";
-					throw $e;
-				}
-				
-				if ($updated)
-				{
-					// ignore id and numUsersCollected
-					if (isset($updatedFields['id']))
-						unset($updatedFields['id']);
-					if (isset($updatedFields['numUsersCollected']))
-						unset($updatedFields['numUsersCollected']);
-					
-					// only count as updated if there are still fields left
-					if (count($updatedFields) > 0)
+					try
 					{
-						c_print('Car updated: ' . carToString($car));
-						c_print('Fields updated:');
-	
-						foreach ($updatedFields as $fieldName => $update)
+						$db->setCarImageName($car->id, $car->imageName);
+					}
+					catch (Exception $e)
+					{
+						$e->__from = "setCarImageName";
+						throw $e;
+					}
+				
+					c_print('New car added: ' . carToString($car));
+					$carsAdded[] = $car;
+					++$numCarsAdded;
+				}
+				else
+				{
+					try
+					{
+						$car->imageName = $db->getCarImageName($car->id);
+					}
+					catch (Exception $e)
+					{
+						$e->__from = "getCarImageName";
+						throw $e;
+					}
+				
+					if ($updated)
+					{
+						// ignore id and numUsersCollected
+						if (isset($updatedFields['id']))
+							unset($updatedFields['id']);
+						if (isset($updatedFields['numUsersCollected']))
+							unset($updatedFields['numUsersCollected']);
+					
+						// only count as updated if there are still fields left
+						if (count($updatedFields) > 0)
 						{
-							c_print($fieldName);
-							c_print('  from: ' . $update['from']);
-							c_print('  to  : ' . $update['to']);
+							c_print('Car updated: ' . carToString($car));
+							c_print('Fields updated:');
+	
+							foreach ($updatedFields as $fieldName => $update)
+							{
+								c_print($fieldName);
+								c_print('  from: ' . $update['from']);
+								c_print('  to  : ' . $update['to']);
+							}
+						
+							$updatedCar = new stdClass();
+							$updatedCar->updatedFields = $updatedFields;
+							$updatedCar->car = $car;
+						
+							$carsUpdated[] = $updatedCar;
+						
+							++$numCarsUpdated;
 						}
-						
-						$updatedCar = new stdClass();
-						$updatedCar->updatedFields = $updatedFields;
-						$updatedCar->car = $car;
-						
-						$carsUpdated[] = $updatedCar;
-						
-						++$numCarsUpdated;
 					}
 				}
 			}
+			catch (Exception $e)
+			{
+				if (!$db->mysqli->rollback())
+					throw new Exception("Unable to rollback.\nMySQL Error ({$this->mysqli->errno}): {$this->mysqli->error}", 0, $e);
+			
+				throw $e;
+			}
+			
+			if (!$db->mysqli->commit())
+				throw new Exception("Unable to commit.\nMySQL Error ({$this->mysqli->errno}): {$this->mysqli->error}");
 		}
 		catch (Exception $e)
 		{
-			c_print('ERROR: Database returned an error during ' . ($e->__from ? $e->__from  : 'insert or update phase') . ': ' . carToString($car));
-			c_print($e->getMessage());
-			$nonVerboseOutputLastIteration = true;
+			if (!$db->mysqli->autocommit(true))
+				throw new Exception("Unable to set autocommit to true.\nMySQL Error ({$this->mysqli->errno}): {$this->mysqli->error}", 0, $e);
 			
-			if ($car->id !== NULL && $added)
-			{
-				try
-				{
-					$db->removeCar($car->id);
-				}
-				catch (Exception $e)
-				{
-					c_print("ERROR: Database returned an error while trying to remove car with ID \"{$car->id}\" after a previous database error: " . carToString($car));
-					c_print($e->getMessage());
-				}
-			}
+			$previousException = $e->getPrevious();
+			$from = NULL;
+			if (isset($e->__from))
+				$from = $e->__from;
+			else if ($previousException !== NULL && isset($previousException->__from))
+				$from = $previousException->__from;
+			else
+				$from = 'insert or update phase';
+			
+			c_print("ERROR: Database returned an error during $from: " . carToString($car));
+			c_print($e->__toString());
+			$nonVerboseOutputLastIteration = true;
 			
 			continue;
 		}
+		
+		if (!$db->mysqli->autocommit(true))
+			throw new Exception("Unable to set autocommit to true.\nMySQL Error ({$this->mysqli->errno}): {$this->mysqli->error}");
 		
 		++$numCarsSucceeded;
 		$cars[] = $car;
@@ -510,16 +515,15 @@ function downloadCarBaseImages($cars, $redownloadBaseImages)
 		}
 		
 		
-		global $imagePath;
-		$baseFilename = $imagePath . HOTWHEELS2_IMAGE_BASE_DIR . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX . HOTWHEELS2_IMAGE_EXT;
+		$tempBaseFilename = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_BASE, false, true);
+		$baseFilename     = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_BASE);
 		
-		// downlaod base image
+		// downlaod base image to temp
 		if ($redownloadBaseImages || !file_exists($baseFilename))
 		{
 			++$numBaseImageDownloadsTried;
 			
-			$baseFilenameTemp = $baseFilename . '__temp';
-			$url = $car->getImageURL(MINE_CAR_IMAGE_BASE_WIDTH);
+			$url = $car->getImageURL(CAR_IMAGE_WIDTH_BASE);
 			
 			c_print("Downloading base image for car: " . carToString($car));
 			c_print("URL: \"$url\"");
@@ -527,31 +531,32 @@ function downloadCarBaseImages($cars, $redownloadBaseImages)
 			
 			try
 			{
-				downloadImage($baseFilenameTemp, $url);
+				downloadImage($tempBaseFilename, $url);
 			}
 			catch (Exception $e)
 			{
-				c_print("ERROR: Download image failed for URL \"$url\" to file \"$baseFilenameTemp\".");
-				c_print($e->getMessage());
+				c_print("ERROR: Download image failed for URL \"$url\" to file \"$tempBaseFilename\".");
+				c_print($e->__toString());
 				
-				if (file_exists($baseFilenameTemp))
+				if (file_exists($tempBaseFilename))
 				{
-					if (!unlink($baseFilenameTemp))
-						c_print("WARNING: Unable to delete base image temp file after failed download: \"$baseFilenameTemp\"");
+					if (!unlink($tempBaseFilename))
+						c_print("WARNING: Unable to delete temp base image file after failed download: \"$tempBaseFilename\".");
 				}
 				
 				$retryBaseImageDownloadsForCars[] = $car;
 				continue;
 			}
 			
-			if (!rename($baseFilenameTemp, $baseFilename))
+			// move temp image
+			if (!rename($tempBaseFilename, $baseFilename))
 			{
-				c_print("ERROR: Unable to rename temp base image file \"$baseFilenameTemp\" to \"$baseFilename\".");
+				c_print("ERROR: Unable to rename temp base image file \"$tempBaseFilename\" to \"$baseFilename\".");
 				
-				if (file_exists($baseFilenameTemp))
+				if (file_exists($tempBaseFilename))
 				{
-					if (!unlink($baseFilenameTemp))
-						c_print("WARNING: Unable to delete base image temp file after failed rename: \"$baseFilenameTemp\"");
+					if (!unlink($tempBaseFilename))
+						c_print("WARNING: Unable to delete temp base image file after failed rename: \"$tempBaseFilename\"");
 				}
 				
 				continue;
@@ -579,36 +584,37 @@ function downloadCarBaseImages($cars, $redownloadBaseImages)
  * Generates an image with the given width from a processed base image.
  */
 
-function generateCarImageType($baseProcessedFilename, $newFilename, $width, $isDetails)
+function generateCarImageType($fromFilename, $tempFilename, $newFilename, $isDetails)
 {
 	$type = $isDetails? 'detail' : 'icon';
 	
-	$newFilenameTemp = $newFilename . '__temp';
-	$result = generateCarImage($baseProcessedFilename, $newFilenameTemp, $width);
+	// generate the image to the temp lcoation
+	$result = ImageManager::generateCarImage($fromFilename, $tempFilename, $isDetails? CAR_IMAGE_WIDTH_DETAIL : CAR_IMAGE_WIDTH_ICON);
 	
-	if ($result['status'] !== 0 || count($result['output']) > 0)
+	if ($result->status !== 0 || count($result->output) > 0)
 	{
 		c_print("ERROR: Failed to generate $type image:");
-		c_print("ERROR: external program returned non-zero status ({$result['status']}) or had output:");
+		c_print("ERROR: external program returned non-zero status ({$result->status}) or had output:");
 		printExternalResult($result);
 		
-		if (file_exists($newFilenameTemp))
+		if (file_exists($tempFilename))
 		{
-			if (!unlink($newFilenameTemp))
-				c_print("WARNING: Unable to delete $type image temp file after failed image generation: \"$newFilenameTemp\"");
+			if (!unlink($tempFilename))
+				c_print("WARNING: Unable to delete temp $type image file after failed image generation: \"$tempFilename\"");
 		}
 		
 		return false;
 	}
 	
-	if (!rename($newFilenameTemp, $newFilename))
+	// move the image from the temp location to the final location
+	if (!rename($tempFilename, $newFilename))
 	{
-		c_print("ERROR: Unable to rename temp $type image file \"$newFilenameTemp\" to \"$newFilename\".");
+		c_print("ERROR: Unable to rename temp $type image file \"$tempFilename\" to \"$newFilename\".");
 		
-		if (file_exists($newFilenameTemp))
+		if (file_exists($tempFilename))
 		{
-			if (!unlink($newFilenameTemp))
-				c_print("WARNING: Unable to delete $type image temp file after failed rename: \"$newFilenameTemp\"");
+			if (!unlink($tempFilename))
+				c_print("WARNING: Unable to delete temp $type image file after failed rename: \"$tempFilename\"");
 		}
 		
 		return false;
@@ -656,12 +662,18 @@ function generateCarImages($cars, $regenerateImages)
 		}
 		
 		
-		global $imagePath;
-		$baseFilename          = $imagePath . HOTWHEELS2_IMAGE_BASE_DIR   . $car->imageName . HOTWHEELS2_IMAGE_BASE_SUFFIX           . HOTWHEELS2_IMAGE_EXT;
-		$baseProcessedFilename = $imagePath . HOTWHEELS2_IMAGE_BASE_DIR   . $car->imageName . HOTWHEELS2_IMAGE_BASE_PROCESSED_SUFFIX . HOTWHEELS2_IMAGE_EXT;
-		$iconFilename          = $imagePath . HOTWHEELS2_IMAGE_ICON_DIR   . $car->imageName . HOTWHEELS2_IMAGE_ICON_SUFFIX           . HOTWHEELS2_IMAGE_EXT;
-		$detailFilename        = $imagePath . HOTWHEELS2_IMAGE_DETAIL_DIR . $car->imageName . HOTWHEELS2_IMAGE_DETAIL_SUFFIX         . HOTWHEELS2_IMAGE_EXT;
+		$tempProcessedBaseFilename = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_PROCESSED_BASE, false, true);
+		$tempIconFilename          = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_ICON,           false, true);
+		$tempDetailFilename        = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_DETAIL,         false, true);
 		
+		$baseFilename   = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_BASE);
+		$iconFilename   = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_ICON);
+		$detailFilename = ImageManager::getImageFilename($car->imageName, CAR_IMAGE_TYPE_DETAIL);
+		
+		
+		// don't process if we are not regenerating images and both images already exist
+		if (!$regenerateImages && file_exists($iconFilename) && file_exists($detailFilename))
+			continue;
 		
 		// make sure the base image exists
 		if (!file_exists($baseFilename))
@@ -673,11 +685,6 @@ function generateCarImages($cars, $regenerateImages)
 			continue;
 		}
 		
-		// don't process if we are not regenerating images and both images already exist
-		if (!$regenerateImages && file_exists($iconFilename) && file_exists($detailFilename))
-			continue;
-		
-		
 		++$numCarsTriedGeneratingImages;
 		
 		c_print('Generating images for car: ' . carToString($car));
@@ -687,25 +694,25 @@ function generateCarImages($cars, $regenerateImages)
 		// process base image with HWIP
 		++$numBaseImageProcessingsTried;
 		
-		if (file_exists($baseProcessedFilename))
+		if (file_exists($tempProcessedBaseFilename))
 		{
-			if (!unlink($baseProcessedFilename))
-				c_print("WARNING: Unable to delete existing base processed image file before processing: \"$baseProcessedFilename\"");
+			if (!unlink($tempProcessedBaseFilename))
+				c_print("WARNING: Unable to delete existing base processed image file before processing: \"$tempBaseProcessedFilename\"");
 		}
 		
-		$result = proccessCarBaseImage($baseFilename, $baseProcessedFilename);
+		$result = ImageManager::processCarBaseImage($baseFilename, $tempProcessedBaseFilename);
 		
-		if ($result['status'] !== 0 || count($result['output']) > 0)
+		if ($result->status !== 0 || count($result->output) > 0)
 		{
-			c_print("ERROR: Failed to proccess base image for car: " . carToString($car));
-			c_print("ERROR: external program returned non-zero status ({$result['status']}) or had output:");
+			c_print("ERROR: Failed to process base image for car: " . carToString($car));
+			c_print("ERROR: external program returned non-zero status ({$result->status}) or had output:");
 			printExternalResult($result);
 			$nonVerboseOutputLastIteration = true;
 			
-			if (file_exists($baseProcessedFilename))
+			if (file_exists($tempProcessedBaseFilename))
 			{
-				if (!unlink($baseProcessedFilename))
-					c_print("WARNING: Unable to delete base processed image file after failed processing: \"$baseProcessedFilename\"");
+				if (!unlink($tempProcessedBaseFilename))
+					c_print("WARNING: Unable to delete temp base processed image file after failed processing: \"$tempProcessedBaseFilename\"");
 			}
 		
 			continue;
@@ -720,7 +727,7 @@ function generateCarImages($cars, $regenerateImages)
 		$failedIconImageGeneration = false;
 		++$numImageGenerationsTried;
 		
-		if (generateCarImageType($baseProcessedFilename, $iconFilename, MINE_CAR_IMAGE_ICON_WIDTH, false))
+		if (generateCarImageType($tempProcessedBaseFilename, $tempIconFilename, $iconFilename, CAR_IMAGE_WIDTH_ICON, false))
 		{
 			$car->generatedIconImage = true;
 			++$numImageGenerationsSucceeded;
@@ -732,7 +739,7 @@ function generateCarImages($cars, $regenerateImages)
 		$failedDetailImageGeneration = false;
 		++$numImageGenerationsTried;
 		
-		if (generateCarImageType($baseProcessedFilename, $detailFilename, MINE_CAR_IMAGE_DETAIL_WIDTH, true))
+		if (generateCarImageType($tempProcessedBaseFilename, $tempDetailFilename, $detailFilename, CAR_IMAGE_WIDTH_DETAIL, true))
 		{
 			$car->generatedDetailImage = true;
 			++$numImageGenerationsSucceeded;
@@ -740,11 +747,11 @@ function generateCarImages($cars, $regenerateImages)
 		else
 			$failedDetailImageGeneration = true;
 		
-		// remove base proccessed image
-		if (file_exists($baseProcessedFilename))
+		// remove base processed image
+		if (file_exists($tempProcessedBaseFilename))
 		{
-			if (!unlink($baseProcessedFilename))
-				c_print("WARNING: Unable to delete base processed image file after generating images: \"$baseProcessedFilename\"");
+			if (!unlink($tempProcessedBaseFilename))
+				c_print("WARNING: Unable to delete temp base processed image file after generating images: \"$tempProcessedBaseFilename\"");
 		}
 		
 		if (!$failedIconImageGeneration && !$failedDetailImageGeneration)
@@ -785,8 +792,6 @@ $regenerateImages = false;
 $redownloadBaseImages = false;
 $searchTerm = ' ';
 $logFilename = MINE_LOG_FILE;
-$imagePath = HOTWHEELS2_IMAGE_PATH;
-$s3ImagesBucket = HOTWHEELS2_S3_IMAGES_BUCKET;
 $skipS3Sync = false;
 
 function getFlagValue($argv, &$i, $label)
@@ -845,16 +850,6 @@ for ($i = 1; $i < count($argv); ++$i)
 			$logFilename = getFlagValue($argv, $i, 'a filename');
 			break;
 		
-		case '-p':
-		case '-imagesPath':
-			$imagePath = getFlagValue($argv, $i, 'a path');
-			break;
-		
-		case '-b':
-		case '-s3Bucket':
-			$s3ImagesBucket = getFlagValue($argv, $i, 'a bucket name');
-			break;
-		
 		case '-y':
 		case '-skipS3Sync':
 			$skipS3Sync = true;
@@ -885,6 +880,12 @@ ini_set("error_log", $logFilename);
 if ($quietMode)
 	ob_start();
 
+c_print('');
+c_print('');
+c_print('');
+c_print('');
+c_print('');
+c_print('');
 c_print('******************************************************************************************');
 c_print('******************************************************************************************');
 c_print('* Mining Start');
@@ -910,7 +911,7 @@ c_print('');
 c_print('Searching' . ($searchTerm === ' ' ? '' : ' "' . $searchTerm . '"') . '...');
 
 $startTime = time();
-$detailURLs = getDetailURLS($searchTerm, 300);
+$detailURLs = HotWheelsAPI::search($searchTerm, 300);
 $endTime = time();
 
 
@@ -1149,13 +1150,13 @@ if (!$skipImages)
 		c_print('');
 		
 		$startTime = time();
-		$result = syncImagesWithS3($s3ImagesBucket, false);
+		$result = ImageManager::syncImagesWithS3(ImageManager::getImagePath(CAR_IMAGE_TYPE_ICON), S3_CAR_IMAGE_BUCKET, S3_CAR_IMAGE_KEY_BASE_PATH_ICON);
 		$endTime = time();
 		
-		if ($result['status'] !== 0)
+		if ($result->status !== 0)
 		{
 			c_print("ERROR: Failed to sync icon images with S3:");
-			c_print("ERROR: external program returned non-zero status ({$result['status']}):");
+			c_print("ERROR: external program returned non-zero status ({$result->status}):");
 			$shouldOuput = true;
 		}
 		
@@ -1163,13 +1164,13 @@ if (!$skipImages)
 		c_print('');
 		
 		$startTime2 = time();
-		$result = syncImagesWithS3($s3ImagesBucket, true);
+		$result = ImageManager::syncImagesWithS3(ImageManager::getImagePath(CAR_IMAGE_TYPE_DETAIL), S3_CAR_IMAGE_BUCKET, S3_CAR_IMAGE_KEY_BASE_PATH_DETAIL);
 		$endTime2 = time();
 		
-		if ($result['status'] !== 0)
+		if ($result->status !== 0)
 		{
 			c_print("ERROR: Failed to sync detail images with S3:");
-			c_print("ERROR: external program returned non-zero status ({$result['status']}):");
+			c_print("ERROR: external program returned non-zero status ({$result->status}):");
 			$shouldOuput = true;
 		}
 		

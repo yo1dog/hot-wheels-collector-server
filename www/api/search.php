@@ -1,14 +1,9 @@
 <?php
-if (!isset($_GET['query']))
-{
-	http_response_code(400);
-	die('"query" missing from query string.');
-}
+require_once __DIR__ . '/../../utils/httpExceptionHandler.php';
+require_once __DIR__ . '/../../utils/database.php';
 
-require '../includes/globals.php';
-require '../../config.php';
-require	'../includes/hotWheels2Models.php';
-require '../includes/database.php';
+if (!isset($_GET['query']))
+	throw new HTTPException(400, '"query" missing from query string.');
 
 $query = $_GET['query'];
 $userID = isset($_GET['userID']) ? $_GET['userID'] : NULL;
@@ -19,10 +14,7 @@ $numPages = 1;
 $cars = $db->search($query, $userID, $page, $numPages);
 
 if ($cars === NULL)
-{
-	http_response_code(400);
-	die('Invalid query. Nothing to search.');
-}
+	throw new HTTPException(400, 'Invalid query. Nothing to search.');
 
 // try toy number
 if (count($cars) === 0)
