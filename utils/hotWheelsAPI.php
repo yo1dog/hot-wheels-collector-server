@@ -159,7 +159,18 @@ class HotWheelsAPI
 		{
 			$index += 6;
 			$index2 = strpos($searchPage, '"', $index);
-			$carDetailURLs[] = substr($searchPage, $index, $index2 - $index);
+			
+			$detailURL = substr($searchPage, $index, $index2 - $index);
+			
+			$collectionStr = "collection/";
+			$collectionStrIndex = strpos($detailURL, $collectionStr);
+			if ($collectionStrIndex === false)
+				continue;
+			
+			$collectionStrIndex += strlen($collectionStr);
+			$detailURL = substr($detailURL, 0, $collectionStrIndex) . rawurlencode(substr($detailURL, $collectionStrIndex));
+			
+			$carDetailURLs[] = $detailURL;
 		}
 		
 		return $carDetailURLs;

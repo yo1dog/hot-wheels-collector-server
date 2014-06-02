@@ -17,7 +17,7 @@ class AuthManager
 	 */
 	public static function getLoggedInUser()
 	{
-		return '2';//self::$loggedInUserID;
+		return '1';//self::$loggedInUserID;
 	}
 }
 ?>

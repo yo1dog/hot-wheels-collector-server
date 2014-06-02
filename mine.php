@@ -258,7 +258,7 @@ function getCars($detailURLs, $db, &$cars)
 		catch (Exception $e)
 		{
 			c_print("ERROR: HotWheels2API returned an error while getting a car for detail URL: \"$detailURL\"");
-			c_print($e->__toString());
+			c_print($e->getMessage());
 			$nonVerboseOutputLastIteration = true;
 			
 			$detailURLsFailed[] = $detailURL;
@@ -536,7 +536,7 @@ function downloadCarBaseImages($cars, $redownloadBaseImages)
 			catch (Exception $e)
 			{
 				c_print("ERROR: Download image failed for URL \"$url\" to file \"$tempBaseFilename\".");
-				c_print($e->__toString());
+				c_print($e->getMessage());
 				
 				if (file_exists($tempBaseFilename))
 				{
@@ -1049,13 +1049,16 @@ if (!$skipImages)
 	$numRetryBaseImageDownloadsForCars = count($result->retryBaseImageDownloadsForCars);
 	
 	c_print('Took ' . formatDuration($endTime - $startTime));
-	printTable(array(
+	$table = array(
 		array($result->numBaseImageDownloadsTried     , ' cars tried downloading base image'),
 		array($result->numBaseImageDownloadsSucceeded , ' cars successfully downloaded base images'),
 		array($result->numBaseImageDownloadsFailed    , ' cars failed downloading base image'),
 		array($result->numBaseImageDownloadsSkipped   , ' cars skipped downloading base image'),
-		array($numRetryBaseImageDownloadsForCars      , ' cars can be retried')
-	));
+	);
+	if (count($result->numBaseImageDownloadsFailed) !== 0 || $numRetryBaseImageDownloadsForCars !== 0)
+		$table[] = array($numRetryBaseImageDownloadsForCars, ' cars can be retried');
+	
+	printTable($table);
 	
 	if ($numRetryBaseImageDownloadsForCars - $result->numBaseImageDownloadsFailed > 0)
 		$shouldOutput = true;

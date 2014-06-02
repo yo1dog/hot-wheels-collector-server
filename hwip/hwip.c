@@ -245,28 +245,31 @@ int process_image(void)
 	// if we found one non-transparent pixel, then bounding_first_y will be set along with the rest
 	if (bounding_first_y == -1)
 	{
-		printf("ERROR: No pixels were found with an alpha > %i\n", alpha_tolerance);
-		return 1;
-	}
-	
-	
-	// add padding
-	bounding_first_x -= bounding_padding;
-	if (bounding_first_x < 0)
+		// use the whole image
 		bounding_first_x = 0;
-	
-	bounding_first_y -= bounding_padding;
-	if (bounding_first_y < 0)
 		bounding_first_y = 0;
-	
-	bounding_last_x += bounding_padding;
-	if (bounding_last_x > image_width - 1)
 		bounding_last_x = image_width - 1;
-	
-	bounding_last_y += bounding_padding;
-	if (bounding_last_y > image_height - 1)
 		bounding_last_y = image_height - 1;
+	}
+	else
+	{
+		// add padding
+		bounding_first_x -= bounding_padding;
+		if (bounding_first_x < 0)
+			bounding_first_x = 0;
 	
+		bounding_first_y -= bounding_padding;
+		if (bounding_first_y < 0)
+			bounding_first_y = 0;
+	
+		bounding_last_x += bounding_padding;
+		if (bounding_last_x > image_width - 1)
+			bounding_last_x = image_width - 1;
+	
+		bounding_last_y += bounding_padding;
+		if (bounding_last_y > image_height - 1)
+			bounding_last_y = image_height - 1;
+	}
 	
 	// printf("Bounding Box: (%i, %i) (%i, %i)\n", bounding_first_x, bounding_first_y, bounding_last_x, bounding_last_y);
 	

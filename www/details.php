@@ -29,7 +29,7 @@ include __DIR__ . '/header.php';
 	<img src="<?php echo htmlspecialchars($car->detailImageURL); ?>" class="detail-car-img" />
 	
 	<a href="#" class="owned-banner details" onclick="return toggleCarOwned(this);" data-car-id="<?php echo htmlspecialchars($car->id); ?>" data-owned="<?php echo $car->owned? '1' : '0'; ?>">
-		<img src="<?php echo $car->owned? "/img/owned.png" : "/img/unowned.png"; ?>" />
+		<img src="<?php echo $car->ownedTimestamp !== NULL? "/img/owned.png" : "/img/unowned.png"; ?>" />
 	</a>
 </div>
 
