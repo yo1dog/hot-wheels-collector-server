@@ -43,10 +43,10 @@ png_bytep* new_image_row_pointers;
 
 int main(int argc, char** argv)
 {
-	// make sure we have are args
+	// make sure we have our args
 	if (argc != 5)
 	{
-		printf("Usage: hwip imagein.png imageout.png alphatolerance (0 - 253) padding\n");
+		printf("Usage: hwip imagein.png imageout.png alphatolerance(0 - 253) padding\n");
 		return 1;
 	}
 	
@@ -59,12 +59,6 @@ int main(int argc, char** argv)
 	}
 	
 	bounding_padding = atoi(argv[4]);
-	
-	if (bounding_padding < 0)
-	{
-		printf("padding must be greater than or equal to 0");
-		return 1;
-	}
 	
 	// read the image
 	int status = read_image(argv[1]);

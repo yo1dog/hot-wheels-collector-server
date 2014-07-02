@@ -1,42 +1,41 @@
 <?php
+// database
 define('DB_HOST',     '');
 define('DB_USER',     '');
 define('DB_PASSWORD', '');
 define('DB_NAME',     '');
 
-define('HOTWHEELS2_IMAGE_PATH',                  '');
-define('HOTWHEELS2_IMAGE_CUSTOM_PATH',           '');
-define('HOTWHEELS2_IMAGE_BASE_DIR',              'bases/');
-define('HOTWHEELS2_IMAGE_DETAIL_DIR',            'details/');
-define('HOTWHEELS2_IMAGE_ICON_DIR',              'icons/');
-define('HOTWHEELS2_IMAGE_BASE_SUFFIX',           '_base');
-define('HOTWHEELS2_IMAGE_BASE_PROCESSED_SUFFIX', '_base_proc');
-define('HOTWHEELS2_IMAGE_ICON_SUFFIX',           '_icon');
-define('HOTWHEELS2_IMAGE_DETAIL_SUFFIX',         '_detail');
-define('HOTWHEELS2_IMAGE_EXT',                   '.png');
-define('HOTWHEELS2_IMAGE_CUSTOM_EXT',            '.jpeg');
-define('HOTWHEELS2_IMAGE_NAME_TRUNCATE_LENGTH',  32);
 
-define('HOTWHEELS2_RESULTS_PER_PAGE',       100);
-define('HOTWHEELS2_MAX_NUM_MOST_COLLECTED', 20);
-define('HOTWHEELS2_MAX_NUM_REMOVALS',       20);
-
-define('HOTWHEELS2_S3_IMAGES_BUCKET',               'HotWheels2_CarImages');
-define('HOTWHEELS2_S3_IMAGES_CUSTOM_BUCKET',        'HotWheels2_CarImagesCustom');
-define('HOTWHEELS2_S3_IMAGES_DETAIL_KEY_BASE_PATH', 'details/');
-define('HOTWHEELS2_S3_IMAGES_ICON_KEY_BASE_PATH',   'icons/');
-define('HOTWHEELS2_S3_URL',                         'http://s3.amazonaws.com/');
+// result limiting
+define('RESULTS_PER_PAGE',                    100);
+define('MAX_NUM_COLLECTION_REMOVALS_RESULTS', 20);
+define('MAX_NUM_MOST_COLLECTED_RESULTS',      20);
 
 
-define('MINE_LOG_FILE', '');
 
-define('MINE_CAR_IMAGE_BASE_WIDTH',   960);
-define('MINE_CAR_IMAGE_ICON_WIDTH',   300);
-define('MINE_CAR_IMAGE_DETAIL_WIDTH', 640);
+// car images
+define('CAR_IMAGE_BASE_PATH', 'change_me_in_config_php'); // base path to store the car images in. Include ending slash. Recommend using an absolute path. eg: /path/www/img/
 
-define('MINE_HWIP_LOCATION',    '');
-define('MINE_CONVERT_LOCATION', 'convert');
+define('S3_CAR_IMAGE_BUCKET',        ''); // S3 bucket to store the car images in
+define('S3_CAR_IMAGE_BUCKET_CUSTOM', ''); // S3 bucket to store the custom car images in
+define('S3_URL',                     'http://s3.amazonaws.com');
 
-define('MINE_HWIP_ALPHA_THRESHOLD', 30);
-define('MINE_HWIP_PADDING',         30);
+define('CAR_IMAGE_WIDTH_BASE',   960); // width of the car image to download from Hot Wheels' server
+define('CAR_IMAGE_WIDTH_ICON',   300); // final width of the car icon image
+define('CAR_IMAGE_WIDTH_DETAIL', 640); // final width of the car detail image
+
+
+// external commands
+define('EXTERNAL_COMMAND_HWIP',   'change_me_in_config_php'); // command to execute the hwip binary. Recommend using an absolute path. eg hwip OR /path/hwip
+define('EXTERNAL_COMMAND_RESIZE', 'convert');                 // command to execure the binary to resize images. Default is to use ImageMagick's convert.
+define('EXTERNAL_COMMAND_AWS',    'aws');                     // command to execure the aws binary
+
+define('AWS_CONFIG_FILE', 'change_me_in_config_php'); // path to aws config. Recommend using an absolute path. eg /path/aws_config
+
+define('HWIP_ALPHA_THRESHOLD', 30);
+define('HWIP_PADDING',         30);
+
+
+// mine
+define('MINE_LOG_FILE', 'change_me_in_config_php'); // path to the log file for mine to use. Recommend using an absolute path. eg /path/mine.log
 ?>

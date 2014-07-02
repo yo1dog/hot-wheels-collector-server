@@ -1,40 +1,45 @@
 HotWheels Image Proccesor
 
+===================================================================================================
+Usage
+===================================================================================================
+
+hwip imagein.png imageout.png alphatolerance(0-253) padding
 
 
-Usage:
-hwip imagein.png imageout.png alphatolerance (0-253) padding
+alphatolerance
+---------------
 
+The alpha value a pixel must be greater than in order to be concidered a forground pixel and
+contribute to the bounding box.
 
-alphatolerance:
-the alpha value a pixel must be greater than
-in order to be concidered a forground pixel and contribute to
-the bounding box.
-
-0 means only pixels that are 100% invisible are concidered
-background pixels.
-
-253 means only pixles that are 100% visible are concidered
-forground pixels.
-
+0 means only pixels that are 100% invisible are concidered background pixels.
+253 means only pixles that are 100% visible are concidered foreground pixels.
 10-15 is usually a good range to account for noise.
 
 
-padding:
-the number of pixels to add to each side of the bounding box.
+padding
+-------
+
+The number of pixels to add to each side of the bounding box.
 
 
+===================================================================================================
+Build
+===================================================================================================
 
-Build:
 make
 
 Requires libpng
 
 
 NOTE: If you get the error:
-error while loading shared libraries: libpng16.so.16: cannot open shared object file: No such file or directory
+error while loading shared libraries: libpng16.so.16: cannot open shared object file: No such file
+or directory
 
-and you are running HWIP under CRON, you probably need to set the LD_LIBRARY_PATH environment variable inside the CRON job like so:
+and you are running HWIP under CRON, you probably need to set the LD_LIBRARY_PATH environment
+variable inside the CRON job like so:
+
 export LD_LIBRARY_PATH=/path/to/libs; /path/to/hwip args args ...
 OR
 . ~/.bash_profile; /path/to/hwip args args ...
