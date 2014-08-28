@@ -8,18 +8,18 @@ define('HOTWHEELS_BASE_IMAGE_URL',      'http://www.hotwheels.com');
  */
 class HotWheelsCar
 {
-	/** @var string   */ public $vehicleID;
-	/** @var string   */ public $name;
-	/** @var string   */ public $toyNumber;
-	/** @var string   */ public $segment;
-	/** @var string   */ public $series;
-	/** @var string   */ public $make;
-	/** @var string   */ public $color;
-	/** @var string   */ public $style;
-	/** @var int|null */ public $numUsersCollected;
-
-	/** @var string   */ private $imageURLBeforeWidth;
-	/** @var string   */ private $imageURLAfterWidth;
+	public $vehicleID;
+	public $name;
+	public $toyNumber;
+	public $segment;
+	public $series;
+	public $make;
+	public $color;
+	public $style;
+	public $numUsersCollected;
+	
+	private $imageURLBeforeWidth;
+	private $imageURLAfterWidth;
 	
 	public function __construct(
 		$vehicleID,

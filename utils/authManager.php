@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 /**
  * Auth Manager
  * 
@@ -7,6 +9,7 @@
 class AuthManager
 {
 	private static $loggedInUserID = NULL;
+	private static $loginChecked = false;
 	
 	/**
 	 * Get Logged In User
@@ -17,7 +20,29 @@ class AuthManager
 	 */
 	public static function getLoggedInUser()
 	{
-		return '1';//self::$loggedInUserID;
+		if (!self::$loginChecked)
+		{
+			if (isset($_SESSION['loggedInUserID']))
+				self::$loggedInUserID = $_SESSION['loggedInUserID'];
+			
+			if (self::$loggedInUserID === NULL)
+				self::$loggedInUserID = '2';
+			
+			self::$loginChecked = true;
+		}
+		
+		return self::$loggedInUserID;
+	}
+	
+	
+	public static function login()
+	{
+		$_SESSION['loggedInUserID'] = '1';
+	}
+	
+	public static function logout()
+	{
+		unset($_SESSION['loggedInUserID']);
 	}
 }
 ?>

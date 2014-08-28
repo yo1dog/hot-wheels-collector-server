@@ -9,6 +9,17 @@
 	</head>
 	<body>
 	
+<?php
+if (isset($NO_SEARCH_BAR) && $NO_SEARCH_BAR === true)
+	return;
+
+if (AuthManager::getLoggedInUser() === '2') 
+	echo '<span>Browsing as a <strong>Guest</strong>. Feel free to make changes and play around. <a href="/login.php">Login</a></span><br />';
+else
+	echo '<span>Hello <strong>Mike (' . AuthManager::getLoggedInUser() . ')</strong> - <a href="/logout.php">Logout</a></span><br />';
+?>
+	<br />
+	
 	<form action="/" method="get" class="search-bar">
 		<table>
 			<tbody>
