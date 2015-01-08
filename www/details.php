@@ -28,7 +28,7 @@ include __DIR__ . '/header.php';
 <div class="detail-image-container">
 	<img src="<?php echo htmlspecialchars($car->detailImageURL); ?>" class="detail-car-img" />
 	
-	<a href="#" class="owned-banner details" onclick="return toggleCarOwned(this);" data-car-id="<?php echo htmlspecialchars($car->id); ?>" data-owned="<?php echo $car->owned? '1' : '0'; ?>">
+	<a href="#" class="owned-banner details" onclick="return toggleCarOwned(this);" data-car-id="<?php echo htmlspecialchars($car->id); ?>" data-owned="<?php echo $car->ownedTimestamp !== NULL? '1' : '0'; ?>">
 		<img src="<?php echo $car->ownedTimestamp !== NULL? "/img/owned.png" : "/img/unowned.png"; ?>" />
 	</a>
 </div>
