@@ -18,3 +18,7 @@ The font-end website allows the user to:
  - View their collection.
  - Add and remove cars from their collection.
  - Search for cars.
+
+Additional functionality to support the app.
+
+ - [View Website](http://hotwheels2.awesomebox.net/)
