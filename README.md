@@ -8,6 +8,11 @@ The server provides an API for:
  - Finding car by QR code.
  - Adding custom cars.
 
+The server also:
+
+ - Maintains an up-to-date database of cars from Hot Wheels' website.
+ - Caches and cleans-up car images by auto-cropping borders.
+
 The font-end website allows the user to:
 
  - View their collection.
