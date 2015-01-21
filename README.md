@@ -22,3 +22,7 @@ The font-end website allows the user to:
 Additional functionality to support the app.
 
  - [View Website](http://hotwheelscollector.awesomebox.net/)
+
+-----------------------------------
+
+[![Screenshot](https://s3.amazonaws.com/mike-projects/Hot+Wheels+Collector/HotWheelsCollectorWebsiteSC.png)](https://s3.amazonaws.com/mike-projects/Hot+Wheels+Collector/HotWheelsCollectorWebsiteSC.png)
