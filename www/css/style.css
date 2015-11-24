@@ -69,14 +69,29 @@ body
 	padding-bottom: 10px;
 }
 
-.car-search-result .car-img
+.car-search-result .car-img-container
 {
 	display: block;
 	width: 150px;
+	height: 150px;
 	
 	border: 1px solid #000000;
 	border-radius: 5px;
+}
 
+.vert-center-spacer
+{
+	display: inline-block;
+	height: 100%;
+	vertical-align: middle;
+}
+
+.car-search-result .car-img
+{
+	max-width: 150px;
+	max-height: 150px;
+	
+	vertical-align: middle;
 }
 
 .owned-banner

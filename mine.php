@@ -48,7 +48,7 @@ set_error_handler("customErrorHandler");
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/utils/hotWheelsAPI.php';
 require_once __DIR__ . '/utils/database.php';
-require_once __DIR__ . '/utils/hotWheels2Car.php';
+require_once __DIR__ . '/utils/hotWheelsCollectorCar.php';
 require_once __DIR__ . '/utils/imageManager.php';
 
 
@@ -205,7 +205,7 @@ function printTable($rows, $verbose = false)
 /*****************************************************************************************************
  * Get Cars
  * 
- * Takes a list of detail URLs and uses the HotWheels2API to parse a car out of each detail page.
+ * Takes a list of detail URLs and uses the HotWheelsColelctorAPI to parse a car out of each detail page.
  * Also returns a list of detail URLs that fail.
  */
  
@@ -257,7 +257,7 @@ function getCars($detailURLs, $db, &$cars)
 		}
 		catch (Exception $e)
 		{
-			c_print("ERROR: HotWheels2API returned an error while getting a car for detail URL: \"$detailURL\"");
+			c_print("ERROR: HotWheelsCollectorAPI returned an error while getting a car for detail URL: \"$detailURL\"");
 			c_print($e->getMessage());
 			$nonVerboseOutputLastIteration = true;
 			
@@ -278,7 +278,7 @@ function getCars($detailURLs, $db, &$cars)
 		$car->style     = cleanField($car->style);
 		
 		// add sortname
-		$car->sortName  = HotWheels2Car::createCarSortName($car->name);
+		$car->sortName  = HotWheelsCollectorCar::createCarSortName($car->name);
 		
 		c_print('Found car: ' . carToString($car), true);
 		++$numCarsFound;
@@ -309,7 +309,7 @@ function getCars($detailURLs, $db, &$cars)
 			
 				if ($added)
 				{
-					$car->imageName = HotWheels2Car::createCarImageName($car->id, $car->name);
+					$car->imageName = HotWheelsCollectorCar::createCarImageName($car->id, $car->name);
 				
 					try
 					{

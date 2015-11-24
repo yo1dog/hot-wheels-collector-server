@@ -12,7 +12,8 @@ function toggleCarOwned(elem)
 	owned = !owned;
 	
 	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open("POST", "/api/setCarOwned.php", true);
+	var endpoint = owned? "/api/setCarOwned.php" : "/api/setCarUnowned.php";
+	xmlhttp.open("POST", endpoint, true);
 	
 	xmlhttp.onreadystatechange = function()
 	{
@@ -21,7 +22,7 @@ function toggleCarOwned(elem)
 			elem.setAttribute("data-pending", "0");
 			elem.className = elem.className.substring(0, elem.className.length - 8);
 			
-			if (xmlhttp.status === 200)
+			if (xmlhttp.status === 200 || xmlhttp.status === 204)
 			{
 				elem.children[0].setAttribute("src", owned? "/img/owned.png" : "/img/unowned.png");
 				elem.setAttribute("data-owned", owned? "1" : "0")
@@ -30,6 +31,6 @@ function toggleCarOwned(elem)
 	};
 	
 	xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-	xmlhttp.send("userID=" + encodeURIComponent(__USER_ID) + "&carID=" + encodeURIComponent(carID) + "&owned=" + (owned? "1" : "0"));
+	xmlhttp.send("userID=" + encodeURIComponent(__USER_ID) + "&carID=" + encodeURIComponent(carID));
 	return false;
 }

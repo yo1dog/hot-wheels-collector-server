@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/hotWheels2Car.php';
+require_once __DIR__ . '/hotWheelsCollectorCar.php';
 
 class DB
 {
@@ -57,7 +57,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_assoc()) !== NULL)
-			$cars[] = new HotWheels2Car($row);
+			$cars[] = new HotWheelsCollectorCar($row);
 		
 		$result->close();
 		
@@ -101,7 +101,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_assoc()) !== NULL)
-			$cars[] = new HotWheels2Car($row);
+			$cars[] = new HotWheelsCollectorCar($row);
 		
 		$result->close();
 		
@@ -149,7 +149,7 @@ class DB
 		$row = $result->fetch_assoc();
 		
 		if ($row)
-			$car = new HotWheels2Car($row);
+			$car = new HotWheelsCollectorCar($row);
 		
 		$result->close();
 		
@@ -177,7 +177,7 @@ class DB
 		$row = $result->fetch_assoc();
 		
 		if ($row)
-			$car = new HotWheels2Car($row);
+			$car = new HotWheelsCollectorCar($row);
 		
 		$result->close();
 		
@@ -204,7 +204,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_assoc()) !== NULL)
-			$cars[] = new HotWheels2Car($row);
+			$cars[] = new HotWheelsCollectorCar($row);
 		
 		$result->close();
 		
@@ -234,7 +234,7 @@ class DB
 		
 		$cars = array();
 		while (($row = $result->fetch_assoc()) !== NULL)
-			$cars[] = new HotWheels2Car($row);
+			$cars[] = new HotWheelsCollectorCar($row);
 		
 		$result->close();
 		
@@ -411,7 +411,7 @@ class DB
 			$added = false;
 			$updated = $this->mysqli->affected_rows > 0;
 			
-			$existingCar = new HotWheels2Car($existingCar);
+			$existingCar = new HotWheelsCollectorCar($existingCar);
 			$updatedFields = $existingCar->diff($car);
 			
 			return $existingCar->id;

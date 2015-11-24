@@ -4,7 +4,7 @@ define('IMAGE_NAME_TRUNCATE_LENGTH', 32);
 //TODO: search for "details" and reaplce with "detail" (image)
 require_once __DIR__ . '/imageManager.php';
 
-class HotWheels2Car
+class HotWheelsCollectorCar
 {
 	public $id;
 	public $vehicleID;
