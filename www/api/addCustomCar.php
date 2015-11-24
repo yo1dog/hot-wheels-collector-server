@@ -12,7 +12,7 @@
  *  series
  *  make
  *  color
- *  style
+ *  carNum
  *  customToyNumber
  *  distinguishingNotes
  *  barcodeData
@@ -42,7 +42,7 @@ $segment             = requiredParam('segment');
 $series              = requiredParam('series');
 $make                = requiredParam('make');
 $color               = requiredParam('color');
-$style               = requiredParam('style');
+$carNum              = requiredParam('carNum');
 $customToyNumber     = requiredParam('customToyNumber');
 $distinguishingNotes = requiredParam('distinguishingNotes');
 $barcodeData         = requiredParam('barcodeData');
@@ -66,7 +66,7 @@ $sortName = HotWheels2Car::createCarSortName($name);
 
 // insert new car
 $db = new DB();
-$carID = $db->insertCustomCar($userID, $name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData);
+$carID = $db->insertCustomCar($userID, $name, $segment, $series, $make, $color, $carNum, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData);
 
 
 

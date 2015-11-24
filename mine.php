@@ -109,7 +109,7 @@ function carToString($car)
 // cleans a field returned from the Hot Wheels website
 function cleanField($str)
 {
-	if (strlen($str) === 0)
+	if ($str === NULL || strlen($str) === 0)
 		return $str;
 	
 	return
@@ -275,7 +275,6 @@ function getCars($detailURLs, $db, &$cars)
 		$car->series    = cleanField($car->series);
 		$car->make      = cleanField($car->make);
 		$car->color     = cleanField($car->color);
-		$car->style     = cleanField($car->style);
 		
 		// add sortname
 		$car->sortName  = HotWheels2Car::createCarSortName($car->name);

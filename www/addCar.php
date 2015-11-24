@@ -27,8 +27,8 @@ include __DIR__ . '/header.php';
 			<td><input type="text" name="color" /></td>
 		</tr>
 		<tr>
-			<th><label for="style">Style:</label></th>
-			<td><input type="text" name="style" /></td>
+			<th><label for="carNum">Car #:</label></th>
+			<td><input type="text" name="carNum" /></td>
 		</tr>
 		<tr>
 			<th><label for="customToyNumber">Toy Number:</label></th>

@@ -15,7 +15,7 @@ class HotWheelsCar
 	public $series;
 	public $make;
 	public $color;
-	public $style;
+	public $carNum;
 	public $numUsersCollected;
 	
 	private $imageURLBeforeWidth;
@@ -29,7 +29,7 @@ class HotWheelsCar
 		$series,
 		$make,
 		$color,
-		$style,
+		$carNum,
 		$numUsersCollected,
 		
 		$imagePath)
@@ -41,7 +41,7 @@ class HotWheelsCar
 		$this->series            = $series;
 		$this->make              = $make;
 		$this->color             = $color;
-		$this->style             = $style;
+		$this->carNum            = $carNum;
 		$this->numUsersCollected = $numUsersCollected;
 		
 		// split the url on the image width
@@ -220,31 +220,63 @@ class HotWheelsAPI
 		// parse the car
 		$index = 0;
 		
+    // <input type="hidden" id="hdnTCMURI" value="tcm:838-123727-16" />
+		$vehicleID = self::parseSection($carDetailPage, $index, 'id="hdnTCMURI" value="', '"', 'vehicleID');
+    
 		// ::::: CAR IMAGE ::::
 		// ...
 		// background-image: url(/en-us/Images/V5328_Toyota_Tundra_tcm838-123677_w351.png);
-		$index = self::requiredStrpos($carDetailPage, '::::: CAR IMAGE ::::', $index, 'imagePath');
-		
+		$index = self::requiredStrpos($carDetailPage, '::::: CAR IMAGE ::::', $index, 'imagePathStart');
 		$imagePath = self::parseSection($carDetailPage, $index, 'url(', ')', 'imagePath');
 		
-		// <a id="wantButton" class="btn btn-med " href="javascript:void(0)" data-action="wantit" carTitle="&#39;10 Toyota Tundra" mainImageUrl ="" vehicleId="tcm:838-123678" carId="V5328" wantHave="Want" segment="2012 New Models" series="" make="Toyota" color="Black" style="Truck" segmentColor="" ><span class="icon icon-star"></span>Want It</a>
-		$name      = self::parseSection($carDetailPage, $index, 'carTitle="',  '"', 'name');
-		$vehicleID = self::parseSection($carDetailPage, $index, 'vehicleId="', '"', 'vehicleID');
-		$toyNumber = self::parseSection($carDetailPage, $index, 'carId="',     '"', 'toyNumber');
-		$segment   = self::parseSection($carDetailPage, $index, 'segment="',   '"', 'segment');
-		$series    = self::parseSection($carDetailPage, $index, 'series="',    '"', 'series');
-		$make      = self::parseSection($carDetailPage, $index, 'make="',      '"', 'make');
-		$color     = self::parseSection($carDetailPage, $index, 'color="',     '"', 'color');
-		$style     = self::parseSection($carDetailPage, $index, 'style="',     '"', 'style');
+		// <h2 class="name">’85 Chevrolet Camaro IROC-Z</h2>
+		$name = self::parseSection($carDetailPage, $index, '<h2 class="name">', '</h2>', 'name');
 		
-		// <li><span class="label">Collected:</span> <span class="value">13606</span></li>
-		$index = strpos($carDetailPage, 'Collected:', $index);
-		$numUsersCollectedStr = trim(self::parseSection($carDetailPage, $index, 'value">', '<', 'numUsersCollected'));
+		/*
+		<li><span class="label">Collected:</span> <span class="value">28875</span></li>
+		<li>
+		<span class="label">Segment:</span>
+		<span class="value"> HW Showroom™</span></li>
+		<li><span class="label">Make:</span><span class="value"> Volkswagen</span></li>
+		<li><span class="label">Car #:</span><span class="value"> 160</span></li>  
+		<li><span class="label">Color:</span><span class="value"> Blue</span></li>
+		<li><span class="label">Series:</span><span class="value">  HW ASPHALT ASSAULT™</span></li>
+        */
+        $index = self::requiredStrpos($carDetailPage, '<span class="label">Collected:</span>', $index, 'numUsersCollectedStart');
+		$numUsersCollectedStr = self::parseSection($carDetailPage, $index, '<span class="value">', '</span>', 'numUsersCollected');
 		
+		$index = self::requiredStrpos($carDetailPage, '<span class="label">Segment:</span>', $index, 'segmentStart');
+		$segment = self::parseSection($carDetailPage, $index, '<span class="value">', '</span>', 'segment');
+		
+		$index = self::requiredStrpos($carDetailPage, '<span class="label">Make:</span>', $index, 'makeStart');
+		$make = self::parseSection($carDetailPage, $index, '<span class="value">', '</span>', 'make');
+		
+		$index = self::requiredStrpos($carDetailPage, '<span class="label">Car #:</span>', $index, 'carNumStart');
+		$carNumStr = self::parseSection($carDetailPage, $index, '<span class="value">', '</span>', 'carNum');
+		
+		$index = self::requiredStrpos($carDetailPage, '<span class="label">Color:</span>', $index, 'colorStart');
+		$color = self::parseSection($carDetailPage, $index, '<span class="value">', '</span>', 'color');
+		
+		$series = NULL;
+		$posIndex = strpos($carDetailPage, '<span class="label">Series:</span>', $index);
+		if ($posIndex !== false) {
+		  $index = $posIndex;
+		  $series = self::parseSection($carDetailPage, $index, '<span class="value">', '</span>', 'series');
+		}
+		
+    // <a class="remove_anchor" rel="nofollow" href="javascript:void(0);"  carId="V5310" onclick="removeCollectionFunction(this);"><span class="remove_btn">Remove From Your Collection</span>
+		$toyNumber = self::parseSection($carDetailPage, $index, 'carId="', '"', 'toyNumber');
+		
+		// parse strings as ints
 		$numUsersCollected = NULL;
+		$numUsersCollectedStr = trim($numUsersCollectedStr);
 		if (is_numeric($numUsersCollectedStr))
 			$numUsersCollected = intval($numUsersCollectedStr);
 		
+		$carNum = NULL;
+		$carNumStr = trim($carNumStr);
+		if (is_numeric($carNumStr))
+			$carNum = intval($carNumStr);
 		
 		return new HotWheelsCar(
 			$vehicleID,
@@ -254,7 +286,7 @@ class HotWheelsAPI
 			$series,
 			$make,
 			$color,
-			$style,
+			$carNum,
 			$numUsersCollected,
 			
 			$imagePath);
