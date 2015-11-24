@@ -52,8 +52,8 @@ include __DIR__ . '/header.php';
 			<td><?php echo htmlspecialchars($car->color); ?></td>
 		</tr>
 		<tr>
-			<th>Style:</th>
-			<td><?php echo htmlspecialchars($car->style); ?></td>
+			<th>Car #:</th>
+			<td><?php echo htmlspecialchars($car->carNum); ?></td>
 		</tr>
 		<tr>
 			<th>Toy Number:</th>

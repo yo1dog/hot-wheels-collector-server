@@ -14,7 +14,7 @@ class HotWheelsCollectorCar
 	public $series;
 	public $make;
 	public $color;
-	public $style;
+	public $carNum;
 	public $numUsersCollected;
 	public $isCustom;
 	public $customToyNumber;
@@ -39,7 +39,7 @@ class HotWheelsCollectorCar
 		$this->series              = $assoc['series'];
 		$this->make                = $assoc['make'];
 		$this->color               = $assoc['color'];
-		$this->style               = $assoc['style'];
+		$this->carNum              = $assoc['car_num'] === NULL? NULL : intval($assoc['car_num']);
 		$this->numUsersCollected   = $assoc['num_users_collected'] === NULL? NULL : intval($assoc['num_users_collected']);
 		$this->isCustom            = $assoc['is_custom'] === '1';
 		$this->customToyNumber     = $assoc['custom_toy_number'];

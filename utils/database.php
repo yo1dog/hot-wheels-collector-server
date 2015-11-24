@@ -358,10 +358,10 @@ class DB
 		$name              = $this->mysqli->real_escape_string($car->name);
 		$toyNumber         = $this->mysqli->real_escape_string($car->toyNumber);
 		$segment           = $this->mysqli->real_escape_string($car->segment);
-		$series            = $this->mysqli->real_escape_string($car->series);
+		$series            = $car->series === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->series) . '"';
 		$make              = $this->mysqli->real_escape_string($car->make);
 		$color             = $this->mysqli->real_escape_string($car->color);
-		$style             = $this->mysqli->real_escape_string($car->style);
+		$carNum            = $car->carNum === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->$carNum) . '"';
 		$numUsersCollected = $car->numUsersCollected === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->numUsersCollected) . '"';
 		$sortName          = $this->mysqli->real_escape_string($car->sortName);
 		
@@ -402,7 +402,7 @@ class DB
 		
 		if ($existingCar !== NULL)
 		{
-			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = \"$series\", make = \"$make\", color = \"$color\", style = \"$style\", num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_escape_string($existingCar['id']) . "\"";
+			$query = "UPDATE cars SET vehicle_id = \"$vehicleID\", name = \"$name\", toy_number = \"$toyNumber\", segment = \"$segment\", series = $series, make = \"$make\", color = \"$color\", car_num = $carNum, num_users_collected = $numUsersCollected, sort_name = \"$sortName\" WHERE id = \"" . $this->mysqli->real_escape_string($existingCar['id']) . "\"";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
@@ -418,7 +418,7 @@ class DB
 		}
 		else
 		{
-			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, style, num_users_collected, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", $numUsersCollected, \"$sortName\")";
+			$query = "INSERT INTO cars (vehicle_id, name, toy_number, segment, series, make, color, car_num, num_users_collected, sort_name) VALUES (\"$vehicleID\", \"$name\", \"$toyNumber\", \"$segment\", $series, \"$make\", \"$color\", $carNum, $numUsersCollected, \"$sortName\")";
 			
 			$success = $this->mysqli->real_query($query);
 			if (!$success)
@@ -471,7 +471,7 @@ class DB
 	}
 	
 	
-	public function insertCustomCar($creatorUserID, $name, $segment, $series, $make, $color, $style, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData)
+	public function insertCustomCar($creatorUserID, $name, $segment, $series, $make, $color, $carNum, $sortName, $customToyNumber, $distinguishingNotes, $barcodeData)
 	{
 		$creatorUserID       = $this->mysqli->real_escape_string($creatorUserID);
 		$name                = $this->mysqli->real_escape_string($name);
@@ -479,13 +479,13 @@ class DB
 		$series              = $this->mysqli->real_escape_string($series);
 		$make                = $this->mysqli->real_escape_string($make);
 		$color               = $this->mysqli->real_escape_string($color);
-		$style               = $this->mysqli->real_escape_string($style);
+		$carNum              = $this->mysqli->real_escape_string($carNum);
 		$sortName            = $this->mysqli->real_escape_string($sortName);
 		$customToyNumber     = $customToyNumber     === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($customToyNumber)     . '"';
 		$distinguishingNotes = $distinguishingNotes === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($distinguishingNotes) . '"';
 		$barcodeData         = $barcodeData         === NULL? 'NULL' : '"' . $this->mysqli->real_escape_string($barcodeData)         . '"';
 		
-		$query = "INSERT INTO cars (name, segment, series, make, color, style, sort_name, is_custom, custom_toy_number, distinguishing_notes, barcode_data) VALUES (\"$name\", \"$segment\", \"$series\", \"$make\", \"$color\", \"$style\", \"$sortName\", 1, $customToyNumber, $distinguishingNotes, $barcodeData)";
+		$query = "INSERT INTO cars (name, segment, series, make, color, car_num, sort_name, is_custom, custom_toy_number, distinguishing_notes, barcode_data) VALUES (\"$name\", \"$segment\", $series, \"$make\", \"$color\", $carNum, \"$sortName\", 1, $customToyNumber, $distinguishingNotes, $barcodeData)";
 		
 		$success = $this->mysqli->real_query($query);
 		if (!$success)
