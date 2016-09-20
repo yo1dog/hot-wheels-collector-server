@@ -361,7 +361,7 @@ class DB
 		$series            = $car->series === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->series) . '"';
 		$make              = $this->mysqli->real_escape_string($car->make);
 		$color             = $this->mysqli->real_escape_string($car->color);
-		$carNum            = $car->carNum === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->$carNum) . '"';
+		$carNum            = $car->carNum === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->carNum) . '"';
 		$numUsersCollected = $car->numUsersCollected === NULL ? 'NULL' : '"' . $this->mysqli->real_escape_string($car->numUsersCollected) . '"';
 		$sortName          = $this->mysqli->real_escape_string($car->sortName);
 		
